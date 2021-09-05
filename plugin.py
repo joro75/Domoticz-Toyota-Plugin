@@ -46,17 +46,19 @@
     </params>
 </plugin>
 """
+
 import Domoticz
-from Domoticz import Devices, Parameters
 
 class ToyotaPlugin:
-    enabled = False
     def __init__(self):
-        #self.var = 123
         return
 
     def onStart(self):
         Domoticz.Log("onStart called")
+        if (len(Devices) == 0):
+            Domoticz.Device(Name="Mileage", Unit=1, TypeName="Counter Incremental").Create()
+            Domoticz.Device(Name="Fuel level", Unit=2, TypeName="Percentage").Create()
+            Domoticz.Log("Devices created.")
 
     def onStop(self):
         Domoticz.Log("onStop called")
