@@ -11,3 +11,17 @@ can retrieve the information, which is then provided as several sensors in Domot
 ## Features
 * Retrieve actual mileage</li>
 * Retrieve actual fuel level percentage
+
+## Dependencies
+This plugin uses the 'mytoyota' library to communicatie with the Toyota
+servers. 
+
+All dependencies can be installed by using the command
+```text
+# pip3 install -r requirements.txt
+```
+
+## Credits
+
+A huge thanks goes to [@DurgNomis-drol](https://github.com/DurgNomis-drol/) for making [mytoyota](https://github.com/DurgNomis-drol/mytoyota).
+
