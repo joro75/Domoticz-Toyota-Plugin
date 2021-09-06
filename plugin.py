@@ -33,7 +33,7 @@
         <ul style="list-style-type:square">
             <li>Username - The username that is also used to login in the myT application.</li>
             <li>Password - The password that is also used to login in the myT application.</li>
-            <li>Locale - The locale that should be used. This can be 'en-us' or another locale.</li>
+            <li>Locale - The locale that should be used. This can be for example 'nl-nl' or another locale. 'en-us' doesn't seem to work!</li>
             <li>Car - An identifier for the car for which the data should be retrieved, if multiple cars are present in the myT application.
             It can be a part of the VIN number, a part of the alias or the model.</li>
         </ul>
@@ -48,9 +48,16 @@
 """
 
 import Domoticz
+import json
+import asyncio
+import mytoyota
+from mytoyota.client import MyT
+import mytoyota.exceptions
 
 class ToyotaPlugin:
     def __init__(self):
+        self._heartbeatCount = 100
+        self._loggedOn = False
         return
 
     def onStart(self):
@@ -60,8 +67,27 @@ class ToyotaPlugin:
             Domoticz.Device(Name="Fuel level", Unit=2, TypeName="Percentage").Create()
             Domoticz.Log("Devices created.")
 
+        self._client = MyT(username=Parameters["Username"],
+                           password=Parameters["Password"],
+                           locale=Parameters["Mode1"],
+                           region="europe")
+        self._loop = asyncio.get_event_loop()
+        try:
+            self._loop.run_until_complete(self._client.login())
+            self._loggedOn = True
+        except mytoyota.exceptions.ToyotaLoginError as ex:
+            Domoticz.Log(str(ex))
+        if self._loggedOn:
+            Domoticz.Log("Succesfully logged on")
+            cars = self._loop.run_until_complete(self._client.get_vehicles())
+            self._car = cars[0]
+
     def onStop(self):
         Domoticz.Log("onStop called")
+
+        self._client = None
+        if self._loop:
+            self._loop.close()
 
     def onConnect(self, Connection, Status, Description):
         Domoticz.Log("onConnect called")
@@ -77,10 +103,21 @@ class ToyotaPlugin:
 
     def onDisconnect(self, Connection):
         Domoticz.Log("onDisconnect called")
-
+                
     def onHeartbeat(self):
         Domoticz.Log("onHeartbeat called")
-
+        self._heartbeatCount += 1
+        if self._heartbeatCount > 10:
+            self._heartbeatCount = 0
+            if self._loggedOn:
+                if self._loop:
+                    if self._car:
+                        vehicle = self._loop.run_until_complete(self._client.get_vehicle_status(self._car))
+                        fuel = vehicle.odometer.fuel
+                        if 2 in Devices:
+                            Devices[2].Update(nValue=int(fuel), sValue=str(fuel))
+#                        Domoticz.Log(f"Retrieved fuel level: {fuel}")
+                
 global _plugin
 _plugin = ToyotaPlugin()
 
