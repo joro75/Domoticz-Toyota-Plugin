@@ -54,18 +54,33 @@ import mytoyota
 from mytoyota.client import MyT
 import mytoyota.exceptions
 
+UNIT_MILEAGE_INDEX: int = 1
+
+UNIT_FUEL_INDEX: int = 2
+
 class ToyotaPlugin:
     def __init__(self):
         self._heartbeatCount = 100
         self._loggedOn = False
+        self._lastMileage = 0
         return
 
     def onStart(self):
-        Domoticz.Log("onStart called")
-        if (len(Devices) == 0):
-            Domoticz.Device(Name="Mileage", Unit=1, TypeName="Counter Incremental").Create()
-            Domoticz.Device(Name="Fuel level", Unit=2, TypeName="Percentage").Create()
-            Domoticz.Log("Devices created.")
+        print(Devices)
+        if not UNIT_MILEAGE_INDEX in Devices or Devices[UNIT_MILEAGE_INDEX] is None:
+            Domoticz.Device(Name="Mileage", Unit=UNIT_MILEAGE_INDEX, 
+                            TypeName="Managed Counter", Subtype=33, Switchtype=3,
+                            Used=1,
+                            Description="Counter to hold the overall mileage",
+                            Options={"ValueUnits": "km",
+                                     "ValueQuantity": "km"}
+                            ).Create()
+        if not UNIT_FUEL_INDEX in Devices or Devices[UNIT_FUEL_INDEX] is None:
+            Domoticz.Device(Name="Fuel level", Unit=UNIT_FUEL_INDEX, 
+                            TypeName="Percentage",
+                            Used=1,
+                            Description="The filled percentage of the fuel tank"
+                            ).Create()
 
         self._client = MyT(username=Parameters["Username"],
                            password=Parameters["Password"],
@@ -77,14 +92,15 @@ class ToyotaPlugin:
             self._loggedOn = True
         except mytoyota.exceptions.ToyotaLoginError as ex:
             Domoticz.Log(str(ex))
+        # TODO: Handle other logon errors and exceptions
         if self._loggedOn:
             Domoticz.Log("Succesfully logged on")
             cars = self._loop.run_until_complete(self._client.get_vehicles())
+            # TODO: Determine the correct car based on the 'Mode2' configuration
             self._car = cars[0]
+        # TODO: Probably better to retrieve the _lastMileage that is already available in Domoticz
 
     def onStop(self):
-        Domoticz.Log("onStop called")
-
         self._client = None
         if self._loop:
             self._loop.close()
@@ -105,19 +121,25 @@ class ToyotaPlugin:
         Domoticz.Log("onDisconnect called")
                 
     def onHeartbeat(self):
-        Domoticz.Log("onHeartbeat called")
         self._heartbeatCount += 1
         if self._heartbeatCount > 10:
             self._heartbeatCount = 0
             if self._loggedOn:
                 if self._loop:
                     if self._car:
+                        Domoticz.Log("Updating vehicle status")
                         vehicle = self._loop.run_until_complete(self._client.get_vehicle_status(self._car))
-                        fuel = vehicle.odometer.fuel
-                        if 2 in Devices:
-                            Devices[2].Update(nValue=int(fuel), sValue=str(fuel))
-#                        Domoticz.Log(f"Retrieved fuel level: {fuel}")
-                
+                        if UNIT_MILEAGE_INDEX in Devices:
+                            # TODO: Would be better to have daily mileage in the top of the counter
+                            #       and the grand total in the value bold text of the counter
+                            mileage = vehicle.odometer.mileage
+                            diff = mileage - self._lastMileage
+                            Devices[UNIT_MILEAGE_INDEX].Update(nValue=0, sValue=f"{mileage};{diff}")
+                            self._lastMileage = mileage
+                        if UNIT_FUEL_INDEX in Devices:
+                            fuel = vehicle.odometer.fuel
+                            Devices[UNIT_FUEL_INDEX].Update(nValue=int(fuel), sValue=str(fuel))
+                            
 global _plugin
 _plugin = ToyotaPlugin()
 
