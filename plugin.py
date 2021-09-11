@@ -3,9 +3,9 @@
 # Author: John de Rooij
 #
 """
-<plugin key="Toyota" name="Toyota" author="joro75" version="0.0.1" externallink="https://github.com/joro75/Domoticz-Toyota-Plugin">
+<plugin key="Toyota" name="Toyota" author="joro75" version="0.1.0" externallink="https://github.com/joro75/Domoticz-Toyota-Plugin">
     <description>
-        <h2>Domoticz Toyota Plugin 0.0.1</h2>
+        <h2>Domoticz Toyota Plugin 0.1.0</h2>
         <p>
         A Domoticz plugin that provides sensors for a Toyota car with connected services.
         </p>
@@ -28,6 +28,7 @@
         <ul style="list-style-type:square">
             <li>Mileage - The actual mileage of the car</li>
             <li>Fuel level - The actual fuel level of the car</li>
+            <li>Distance to home - The actual distance between the car and home</li>
         </ul>
         <h3>Configuration</h3>
         <ul style="list-style-type:square">
@@ -53,12 +54,13 @@ import asyncio
 import mytoyota
 from mytoyota.client import MyT
 import mytoyota.exceptions
-
-import random
+import geopy.distance
 
 UNIT_MILEAGE_INDEX: int = 1
 
 UNIT_FUEL_INDEX: int = 2
+
+UNIT_DISTANCE_INDEX: int = 3
 
 class ToyotaPlugin:
     def __init__(self):
@@ -71,7 +73,7 @@ class ToyotaPlugin:
         print(Devices)
         if not UNIT_MILEAGE_INDEX in Devices or Devices[UNIT_MILEAGE_INDEX] is None:
             Domoticz.Device(Name="Mileage", Unit=UNIT_MILEAGE_INDEX, 
-                            TypeName="Managed Counter", Subtype=33, Switchtype=3,
+                            TypeName="Counter Incremental", Switchtype=3,
                             Used=1,
                             Description="Counter to hold the overall mileage",
                             Options={"ValueUnits": "km",
@@ -83,7 +85,24 @@ class ToyotaPlugin:
                             Used=1,
                             Description="The filled percentage of the fuel tank"
                             ).Create()
+        if not UNIT_DISTANCE_INDEX in Devices or Devices[UNIT_DISTANCE_INDEX] is None:
+            Domoticz.Device(Name="Distance to home", Unit=UNIT_DISTANCE_INDEX, 
+                            TypeName="Custom Sensor", Type=243, Subtype=31,
+                            Options={'Custom': '1;km'},
+                            Used=1,
+                            Description="The distance between home and the car"
+                            ).Create()
 
+        Domoticz.Debugging(1)
+        DumpConfigToLog()
+
+        self._homeLocation = Settings['Location']
+                
+        # Retrieve the last mileage that is already known in Domoticz
+        if UNIT_MILEAGE_INDEX in Devices and not Devices[UNIT_MILEAGE_INDEX] is None:
+            self._lastMileage = int(Devices[UNIT_MILEAGE_INDEX].sValue)
+        
+        
         self._client = MyT(username=Parameters["Username"],
                            password=Parameters["Password"],
                            locale=Parameters["Mode1"],
@@ -101,7 +120,6 @@ class ToyotaPlugin:
             self._car = self._lookupCar(cars)
             if self._car is None:
                 Domoticz.Error("Could not find the desired car in the MyT information")
-        # TODO: Probably better to retrieve the _lastMileage that is already available in Domoticz
 
     def _lookupCar(self, cars):
         if len(Parameters["Mode2"]) > 0:
@@ -148,17 +166,23 @@ class ToyotaPlugin:
                         vehicle = self._loop.run_until_complete(self._client.get_vehicle_status(self._car))
                         if not vehicle.odometer is None:
                             if UNIT_MILEAGE_INDEX in Devices:
-                                # TODO: Would be better to have daily mileage in the top of the counter
-                                #       and the grand total in the value bold text of the counter
                                 mileage = vehicle.odometer.mileage
-                                # Debugging do, some fake km...
-                                mileage = self._lastMileage + random.randint(0, 35)
                                 diff = mileage - self._lastMileage
-                                Devices[UNIT_MILEAGE_INDEX].Update(nValue=0, sValue=f"{mileage};{diff}")
-                                self._lastMileage = mileage
+                                if diff != 0:
+                                    Devices[UNIT_MILEAGE_INDEX].Update(nValue=0, sValue=f'{diff}')
+                                    self._lastMileage = mileage
                             if UNIT_FUEL_INDEX in Devices:
                                 fuel = vehicle.odometer.fuel
                                 Devices[UNIT_FUEL_INDEX].Update(nValue=int(fuel), sValue=str(fuel))
+
+                            if UNIT_DISTANCE_INDEX in Devices:
+                                if len(self._homeLocation) > 0:
+                                    coords_home = tuple([float(part) for part in self._homeLocation.split(';')])
+                                    coords_car = (float(vehicle.parking.latitude), float(vehicle.parking.longitude))
+                                    dist = geopy.distance.distance(coords_home, coords_car).km
+                                    # Round it to meters.
+                                    dist = round(dist, 3)
+                                    Devices[UNIT_DISTANCE_INDEX].Update(nValue=0, sValue=f'{dist}')
                             
 global _plugin
 _plugin = ToyotaPlugin()
