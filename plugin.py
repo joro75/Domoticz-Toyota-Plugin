@@ -35,7 +35,7 @@
             <li>Password - The password that is also used to login in the myT application.</li>
             <li>Locale - The locale that should be used. This can be for example 'nl-nl' or another locale. 'en-us' doesn't seem to work!</li>
             <li>Car - An identifier for the car for which the data should be retrieved, if multiple cars are present in the myT application.
-            It can be a part of the VIN number, a part of the alias or the model.</li>
+            It can be a part of the VIN number, alias, licenseplate or the model.</li>
         </ul>
     </description>
     <params>
@@ -53,6 +53,8 @@ import asyncio
 import mytoyota
 from mytoyota.client import MyT
 import mytoyota.exceptions
+
+import random
 
 UNIT_MILEAGE_INDEX: int = 1
 
@@ -96,10 +98,25 @@ class ToyotaPlugin:
         if self._loggedOn:
             Domoticz.Log("Succesfully logged on")
             cars = self._loop.run_until_complete(self._client.get_vehicles())
-            # TODO: Determine the correct car based on the 'Mode2' configuration
-            self._car = cars[0]
+            self._car = self._lookupCar(cars)
+            if self._car is None:
+                Domoticz.Error("Could not find the desired car in the MyT information")
         # TODO: Probably better to retrieve the _lastMileage that is already available in Domoticz
 
+    def _lookupCar(self, cars):
+        if len(Parameters["Mode2"]) > 0:
+            id = Parameters["Mode2"].upper().strip()
+            for car in cars:
+                if id in car.get('alias', '').upper():
+                    return car
+                if id in car.get('licensePlate', '').upper():
+                    return car
+                if id in car.get('vin', '').upper():
+                    return car
+                if id in car.get('modelName', '').upper():
+                    return car
+        return cars[0]
+        
     def onStop(self):
         self._client = None
         if self._loop:
@@ -129,16 +146,19 @@ class ToyotaPlugin:
                     if self._car:
                         Domoticz.Log("Updating vehicle status")
                         vehicle = self._loop.run_until_complete(self._client.get_vehicle_status(self._car))
-                        if UNIT_MILEAGE_INDEX in Devices:
-                            # TODO: Would be better to have daily mileage in the top of the counter
-                            #       and the grand total in the value bold text of the counter
-                            mileage = vehicle.odometer.mileage
-                            diff = mileage - self._lastMileage
-                            Devices[UNIT_MILEAGE_INDEX].Update(nValue=0, sValue=f"{mileage};{diff}")
-                            self._lastMileage = mileage
-                        if UNIT_FUEL_INDEX in Devices:
-                            fuel = vehicle.odometer.fuel
-                            Devices[UNIT_FUEL_INDEX].Update(nValue=int(fuel), sValue=str(fuel))
+                        if not vehicle.odometer is None:
+                            if UNIT_MILEAGE_INDEX in Devices:
+                                # TODO: Would be better to have daily mileage in the top of the counter
+                                #       and the grand total in the value bold text of the counter
+                                mileage = vehicle.odometer.mileage
+                                # Debugging do, some fake km...
+                                mileage = self._lastMileage + random.randint(0, 35)
+                                diff = mileage - self._lastMileage
+                                Devices[UNIT_MILEAGE_INDEX].Update(nValue=0, sValue=f"{mileage};{diff}")
+                                self._lastMileage = mileage
+                            if UNIT_FUEL_INDEX in Devices:
+                                fuel = vehicle.odometer.fuel
+                                Devices[UNIT_FUEL_INDEX].Update(nValue=int(fuel), sValue=str(fuel))
                             
 global _plugin
 _plugin = ToyotaPlugin()
