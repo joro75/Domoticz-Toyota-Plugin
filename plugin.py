@@ -34,7 +34,7 @@
         <ul style="list-style-type:square">
             <li>Username - The username that is also used to login in the myT application.</li>
             <li>Password - The password that is also used to login in the myT application.</li>
-            <li>Locale - The locale that should be used. This can be for example 'nl-nl' or another locale. 'en-us' doesn't seem to work!</li>
+            <li>Locale - The locale that should be used. This can be for example 'en-gb' or another locale. 'en-us' doesn't seem to work!</li>
             <li>Car - An identifier for the car for which the data should be retrieved, if multiple cars are present in the myT application.
             It can be a part of the VIN number, alias, licenseplate or the model.</li>
         </ul>
@@ -42,7 +42,7 @@
     <params>
         <param field="Username" label="Username" width="200px" required="true"/>
         <param field="Password" label="Password" width="200px" required="true" password="true"/>
-        <param field="Mode1" label="Locale" width="200px" required="false" default="en-us"/>
+        <param field="Mode1" label="Locale" width="200px" required="false" default="en-gb"/>
         <param field="Mode2" label="Car" width="200px" required="false" />
     </params>
 </plugin>
@@ -67,33 +67,11 @@ class ToyotaPlugin:
         self._heartbeatCount = 100
         self._loggedOn = False
         self._lastMileage = 0
+        self._lastFuel = 0
         return
-
-    def _createDevices(self):
-        if not UNIT_MILEAGE_INDEX in Devices or Devices[UNIT_MILEAGE_INDEX] is None:
-            Domoticz.Device(Name='Mileage', Unit=UNIT_MILEAGE_INDEX, 
-                            TypeName='Counter Incremental', Switchtype=3,
-                            Used=1,
-                            Description='Counter to hold the overall mileage',
-                            Options={'ValueUnits': 'km',
-                                     'ValueQuantity': 'km'}
-                            ).Create()
-        if not UNIT_FUEL_INDEX in Devices or Devices[UNIT_FUEL_INDEX] is None:
-            Domoticz.Device(Name='Fuel level', Unit=UNIT_FUEL_INDEX, 
-                            TypeName='Percentage',
-                            Used=1,
-                            Description='The filled percentage of the fuel tank'
-                            ).Create()
-        if not UNIT_DISTANCE_INDEX in Devices or Devices[UNIT_DISTANCE_INDEX] is None:
-            Domoticz.Device(Name='Distance to home', Unit=UNIT_DISTANCE_INDEX, 
-                            TypeName='Custom Sensor', Type=243, Subtype=31,
-                            Options={'Custom': '1;km'},
-                            Used=1,
-                            Description='The distance between home and the car'
-                            ).Create()
     
     def _lookupCar(self, cars, identifier):
-        if len(identifier) > 0:
+        if not cars is None and len(identifier) > 0:
             id = identifier.upper().strip()
             for car in cars:
                 if id in car.get('alias', '').upper():
@@ -107,27 +85,35 @@ class ToyotaPlugin:
         return None
 
     def _connectToMyT(self):
-        self._client = MyT(username=Parameters['Username'],
-                           password=Parameters['Password'],
-                           locale=Parameters['Mode1'],
-                           region='europe')
+        self._loggedOn = False
         self._loop = asyncio.get_event_loop()
+        cars = None
         try:
+            self._client = MyT(username=Parameters['Username'],
+                               password=Parameters['Password'],
+                               locale=Parameters['Mode1'],
+                               region='europe')
             self._loop.run_until_complete(self._client.login())
+            cars = self._loop.run_until_complete(self._client.get_vehicles())
             self._loggedOn = True
         except mytoyota.exceptions.ToyotaLoginError as ex:
-            Domoticz.Log(str(ex))
-        # TODO: Handle other logon errors and exceptions
+            Domoticz.Error(f'Login Error: {ex}')
+        except mytoyota.exceptions.ToyotaInvalidUsername as ex:
+            Domoticz.Error(f'Invalid username: {ex}')
         if self._loggedOn:
             Domoticz.Log('Succesfully logged on')
-            cars = self._loop.run_until_complete(self._client.get_vehicles())
             self._car = self._lookupCar(cars, Parameters['Mode2'])
             if self._car is None:
                 self._car = self._lookupCar(cars, Parameters['Name'])
             if self._car is None:
                 Domoticz.Error('Could not find the desired car in the MyT information')
-
+        else:
+            Domoticz.Error('Logon failed')
+            
+            
     def _ensureConnected(self):
+        if not self._isConnected():
+            self._connectToMyT()
         return self._isConnected()
         
     def _isConnected(self):
@@ -138,42 +124,81 @@ class ToyotaPlugin:
                     connected = True
         return connected
 
+    def _retrieveVehicleStatus(self):
+        vehicle = None
+        if self._ensureConnected():
+            Domoticz.Log('Updating vehicle status')
+            # TODO: Catch errors and exceptions
+            vehicle = self._loop.run_until_complete(self._client.get_vehicle_status(self._car))
+        if vehicle is None:
+            Domoticz.Error('Vehicle status could not be retrieved')    
+        return vehicle
+            
     def _updateSensors(self):
-        Domoticz.Log('Updating vehicle status')
-        vehicle = self._loop.run_until_complete(self._client.get_vehicle_status(self._car))
-        if not vehicle.odometer is None:
-            if UNIT_MILEAGE_INDEX in Devices:
-                mileage = vehicle.odometer.mileage
-                diff = mileage - self._lastMileage
-                if diff != 0:
-                    Devices[UNIT_MILEAGE_INDEX].Update(nValue=0, sValue=f'{diff}')
-                    self._lastMileage = mileage
-            if UNIT_FUEL_INDEX in Devices:
-                fuel = vehicle.odometer.fuel
-                Devices[UNIT_FUEL_INDEX].Update(nValue=int(fuel), sValue=str(fuel))
+        vehicle = self._retrieveVehicleStatus()
+        if not vehicle is None:
+            if not vehicle.odometer is None:
+                if UNIT_MILEAGE_INDEX in Devices:
+                    mileage = vehicle.odometer.mileage
+                    diff = mileage - self._lastMileage
+                    if diff != 0:
+                        Devices[UNIT_MILEAGE_INDEX].Update(nValue=0, sValue=f'{diff}')
+                        self._lastMileage = mileage
+                if UNIT_FUEL_INDEX in Devices:
+                    fuel = vehicle.odometer.fuel
+                    if fuel != self._lastFuel:
+                        Devices[UNIT_FUEL_INDEX].Update(nValue=int(float(fuel)), sValue=str(fuel))
+                        self._lastFuel = fuel
+            
+            if not vehicle.parking is None:
+                if not self._coordinatesHome is None:
+                    if UNIT_DISTANCE_INDEX in Devices:
+                        coords_car = (float(vehicle.parking.latitude), float(vehicle.parking.longitude))
+                        dist = geopy.distance.distance(self._coordinatesHome, coords_car).km
+                        # Round it to meters.
+                        dist = round(dist, 3)
+                        Devices[UNIT_DISTANCE_INDEX].Update(nValue=0, sValue=f'{dist}')
 
-            if UNIT_DISTANCE_INDEX in Devices:
-                if len(self._homeLocation) > 0:
-                    coords_home = tuple([float(part) for part in self._homeLocation.split(';')])
-                    coords_car = (float(vehicle.parking.latitude), float(vehicle.parking.longitude))
-                    dist = geopy.distance.distance(coords_home, coords_car).km
-                    # Round it to meters.
-                    dist = round(dist, 3)
-                    Devices[UNIT_DISTANCE_INDEX].Update(nValue=0, sValue=f'{dist}')
+    def _createDevices(self):
+        vehicle = self._retrieveVehicleStatus()
+        if not vehicle is None:
+            if not UNIT_MILEAGE_INDEX in Devices or Devices[UNIT_MILEAGE_INDEX] is None:
+                Domoticz.Device(Name='Mileage', Unit=UNIT_MILEAGE_INDEX, 
+                                TypeName='Counter Incremental', Switchtype=3,
+                                Used=1,
+                                Description='Counter to hold the overall mileage',
+                                Options={'ValueUnits': 'km',
+                                         'ValueQuantity': 'km'}
+                                ).Create()
+            if not UNIT_FUEL_INDEX in Devices or Devices[UNIT_FUEL_INDEX] is None:
+                Domoticz.Device(Name='Fuel level', Unit=UNIT_FUEL_INDEX, 
+                                TypeName='Percentage',
+                                Used=1,
+                                Description='The filled percentage of the fuel tank'
+                                ).Create()
+            if not UNIT_DISTANCE_INDEX in Devices or Devices[UNIT_DISTANCE_INDEX] is None:
+                Domoticz.Device(Name='Distance to home', Unit=UNIT_DISTANCE_INDEX, 
+                                TypeName='Custom Sensor', Type=243, Subtype=31,
+                                Options={'Custom': '1;km'},
+                                Used=1,
+                                Description='The distance between home and the car'
+                                ).Create()
     
     def onStart(self):
         Domoticz.Debugging(1)
         DumpConfigToLog()
 
-        self._homeLocation = Settings['Location']
+        self._coordinatesHome = None
+        if len(Settings['Location']) > 0:
+            self._coordinatesHome = tuple([float(part) for part in Settings['Location'].split(';')])
                 
         self._createDevices()
-
-        self._connectToMyT()
                 
         # Retrieve the last mileage that is already known in Domoticz
         if UNIT_MILEAGE_INDEX in Devices and not Devices[UNIT_MILEAGE_INDEX] is None:
             self._lastMileage = int(Devices[UNIT_MILEAGE_INDEX].sValue)
+        if UNIT_FUEL_INDEX in Devices and not Devices[UNIT_FUEL_INDEX] is None:
+            self._lastFuel = float(Devices[UNIT_FUEL_INDEX].sValue)
             
     def onStop(self):
         self._client = None
@@ -199,8 +224,7 @@ class ToyotaPlugin:
         self._heartbeatCount += 1
         if self._heartbeatCount > 10:
             self._heartbeatCount = 0
-            if self._ensureConnected():
-                self._updateSensors()
+            self._updateSensors()
                                                 
 global _plugin
 _plugin = ToyotaPlugin()
@@ -240,7 +264,7 @@ def onHeartbeat():
 # Generic helper functions
 def DumpConfigToLog():
     for x in Parameters:
-        if Parameters[x] != "":
+        if Parameters[x] != '':
             Domoticz.Debug( "'" + x + "':'" + str(Parameters[x]) + "'")
     Domoticz.Debug("Device count: " + str(len(Devices)))
     for x in Devices:
