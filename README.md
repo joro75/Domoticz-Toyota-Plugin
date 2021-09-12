@@ -1,4 +1,4 @@
-# Domoticz-Toyota-Plugin 0.0.1
+# Domoticz-Toyota-Plugin 0.1.0
 A Domoticz plugin that provides sensors for a Toyota car with connected services.
 
 It is using the same API that is used by the Toyota MyT connected services. This API is however only useable
@@ -9,12 +9,13 @@ The Toyota car should first be made available in the MyT connected services, aft
 can retrieve the information, which is then provided as several sensors in Domoticz.
 
 ## Features
-* Retrieve actual mileage</li>
+* Retrieve actual mileage
 * Retrieve actual fuel level percentage
+* Shows the distance between the car and home
 
 ## Dependencies
 This plugin uses the 'mytoyota' library to communicatie with the Toyota
-servers. 
+servers. Also the 'geopy' library is used to calculate distances.
 
 All dependencies can be installed by using the command
 ```text
