@@ -69,8 +69,7 @@ class ToyotaPlugin:
         self._lastMileage = 0
         return
 
-    def onStart(self):
-        print(Devices)
+    def _createDevices(self):
         if not UNIT_MILEAGE_INDEX in Devices or Devices[UNIT_MILEAGE_INDEX] is None:
             Domoticz.Device(Name='Mileage', Unit=UNIT_MILEAGE_INDEX, 
                             TypeName='Counter Incremental', Switchtype=3,
@@ -92,17 +91,22 @@ class ToyotaPlugin:
                             Used=1,
                             Description='The distance between home and the car'
                             ).Create()
+    
+    def _lookupCar(self, cars, identifier):
+        if len(identifier) > 0:
+            id = identifier.upper().strip()
+            for car in cars:
+                if id in car.get('alias', '').upper():
+                    return car
+                if id in car.get('licensePlate', '').upper():
+                    return car
+                if id in car.get('vin', '').upper():
+                    return car
+                if id in car.get('modelName', '').upper():
+                    return car
+        return None
 
-        Domoticz.Debugging(1)
-        DumpConfigToLog()
-
-        self._homeLocation = Settings['Location']
-                
-        # Retrieve the last mileage that is already known in Domoticz
-        if UNIT_MILEAGE_INDEX in Devices and not Devices[UNIT_MILEAGE_INDEX] is None:
-            self._lastMileage = int(Devices[UNIT_MILEAGE_INDEX].sValue)
-        
-        
+    def _connectToMyT(self):
         self._client = MyT(username=Parameters['Username'],
                            password=Parameters['Password'],
                            locale=Parameters['Mode1'],
@@ -123,20 +127,54 @@ class ToyotaPlugin:
             if self._car is None:
                 Domoticz.Error('Could not find the desired car in the MyT information')
 
-    def _lookupCar(self, cars, identifier):
-        if len(identifier) > 0:
-            id = identifier.upper().strip()
-            for car in cars:
-                if id in car.get('alias', '').upper():
-                    return car
-                if id in car.get('licensePlate', '').upper():
-                    return car
-                if id in car.get('vin', '').upper():
-                    return car
-                if id in car.get('modelName', '').upper():
-                    return car
-        return None
+    def _ensureConnected(self):
+        return self._isConnected()
         
+    def _isConnected(self):
+        connected = False
+        if self._loggedOn:
+            if self._loop:
+                if self._car:
+                    connected = True
+        return connected
+
+    def _updateSensors(self):
+        Domoticz.Log('Updating vehicle status')
+        vehicle = self._loop.run_until_complete(self._client.get_vehicle_status(self._car))
+        if not vehicle.odometer is None:
+            if UNIT_MILEAGE_INDEX in Devices:
+                mileage = vehicle.odometer.mileage
+                diff = mileage - self._lastMileage
+                if diff != 0:
+                    Devices[UNIT_MILEAGE_INDEX].Update(nValue=0, sValue=f'{diff}')
+                    self._lastMileage = mileage
+            if UNIT_FUEL_INDEX in Devices:
+                fuel = vehicle.odometer.fuel
+                Devices[UNIT_FUEL_INDEX].Update(nValue=int(fuel), sValue=str(fuel))
+
+            if UNIT_DISTANCE_INDEX in Devices:
+                if len(self._homeLocation) > 0:
+                    coords_home = tuple([float(part) for part in self._homeLocation.split(';')])
+                    coords_car = (float(vehicle.parking.latitude), float(vehicle.parking.longitude))
+                    dist = geopy.distance.distance(coords_home, coords_car).km
+                    # Round it to meters.
+                    dist = round(dist, 3)
+                    Devices[UNIT_DISTANCE_INDEX].Update(nValue=0, sValue=f'{dist}')
+    
+    def onStart(self):
+        Domoticz.Debugging(1)
+        DumpConfigToLog()
+
+        self._homeLocation = Settings['Location']
+                
+        self._createDevices()
+
+        self._connectToMyT()
+                
+        # Retrieve the last mileage that is already known in Domoticz
+        if UNIT_MILEAGE_INDEX in Devices and not Devices[UNIT_MILEAGE_INDEX] is None:
+            self._lastMileage = int(Devices[UNIT_MILEAGE_INDEX].sValue)
+            
     def onStop(self):
         self._client = None
         if self._loop:
@@ -156,36 +194,14 @@ class ToyotaPlugin:
 
     def onDisconnect(self, Connection):
         Domoticz.Log("onDisconnect called")
-                
+        
     def onHeartbeat(self):
         self._heartbeatCount += 1
         if self._heartbeatCount > 10:
             self._heartbeatCount = 0
-            if self._loggedOn:
-                if self._loop:
-                    if self._car:
-                        Domoticz.Log('Updating vehicle status')
-                        vehicle = self._loop.run_until_complete(self._client.get_vehicle_status(self._car))
-                        if not vehicle.odometer is None:
-                            if UNIT_MILEAGE_INDEX in Devices:
-                                mileage = vehicle.odometer.mileage
-                                diff = mileage - self._lastMileage
-                                if diff != 0:
-                                    Devices[UNIT_MILEAGE_INDEX].Update(nValue=0, sValue=f'{diff}')
-                                    self._lastMileage = mileage
-                            if UNIT_FUEL_INDEX in Devices:
-                                fuel = vehicle.odometer.fuel
-                                Devices[UNIT_FUEL_INDEX].Update(nValue=int(fuel), sValue=str(fuel))
-
-                            if UNIT_DISTANCE_INDEX in Devices:
-                                if len(self._homeLocation) > 0:
-                                    coords_home = tuple([float(part) for part in self._homeLocation.split(';')])
-                                    coords_car = (float(vehicle.parking.latitude), float(vehicle.parking.longitude))
-                                    dist = geopy.distance.distance(coords_home, coords_car).km
-                                    # Round it to meters.
-                                    dist = round(dist, 3)
-                                    Devices[UNIT_DISTANCE_INDEX].Update(nValue=0, sValue=f'{dist}')
-                            
+            if self._ensureConnected():
+                self._updateSensors()
+                                                
 global _plugin
 _plugin = ToyotaPlugin()
 
