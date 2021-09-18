@@ -128,8 +128,10 @@ class ToyotaPlugin:
         vehicle = None
         if self._ensureConnected():
             Domoticz.Log('Updating vehicle status')
-            # TODO: Catch errors and exceptions
-            vehicle = self._loop.run_until_complete(self._client.get_vehicle_status(self._car))
+            try:
+                vehicle = self._loop.run_until_complete(self._client.get_vehicle_status(self._car))
+            except mytoyota.Exceptions.ToyotaInternalError
+                pass
         if vehicle is None:
             Domoticz.Error('Vehicle status could not be retrieved')    
         return vehicle
