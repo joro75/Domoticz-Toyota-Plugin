@@ -26,6 +26,6 @@ All dependencies can be installed by using the command
 
 A huge thanks goes to [@DurgNomis-drol](https://github.com/DurgNomis-drol/) for making [mytoyota](https://github.com/DurgNomis-drol/mytoyota).
 
-For the icons we used the following icons from the [Noun Project](thenounproject.com):
+For the icons we used the following icons from the [Noun Project](https://thenounproject.com):
 * [fuel meter](https://thenounproject.com/search/?q=fuel+meter&i=2690780#) by Phonlaphat Thongsriphong from the Noun Project
 
