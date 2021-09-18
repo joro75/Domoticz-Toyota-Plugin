@@ -171,10 +171,12 @@ class ToyotaPlugin:
                                          'ValueQuantity': 'km'}
                                 ).Create()
             if not UNIT_FUEL_INDEX in Devices or Devices[UNIT_FUEL_INDEX] is None:
+                Domoticz.Image('ToyotaFuelMeter.zip').Create()
                 Domoticz.Device(Name='Fuel level', Unit=UNIT_FUEL_INDEX, 
                                 TypeName='Percentage',
                                 Used=1,
-                                Description='The filled percentage of the fuel tank'
+                                Description='The filled percentage of the fuel tank',
+                                Image=Images['ToyotaFuelMeter'].ID
                                 ).Create()
             if not UNIT_DISTANCE_INDEX in Devices or Devices[UNIT_DISTANCE_INDEX] is None:
                 Domoticz.Device(Name='Distance to home', Unit=UNIT_DISTANCE_INDEX, 
@@ -190,16 +192,25 @@ class ToyotaPlugin:
 
         self._coordinatesHome = None
         if len(Settings['Location']) > 0:
-            self._coordinatesHome = tuple([float(part) for part in Settings['Location'].split(';')])
-                
+            try:
+                self._coordinatesHome = tuple([float(part) for part in Settings['Location'].split(';')])
+            except ValueError:
+                pass
+                            
         self._createDevices()
                 
         # Retrieve the last mileage that is already known in Domoticz
         if UNIT_MILEAGE_INDEX in Devices and not Devices[UNIT_MILEAGE_INDEX] is None:
-            self._lastMileage = int(Devices[UNIT_MILEAGE_INDEX].sValue)
+            try:
+                self._lastMileage = int(Devices[UNIT_MILEAGE_INDEX].sValue)
+            except ValueError:
+                self._lastMileage = 0
         if UNIT_FUEL_INDEX in Devices and not Devices[UNIT_FUEL_INDEX] is None:
-            self._lastFuel = float(Devices[UNIT_FUEL_INDEX].sValue)
-            
+            try:
+                self._lastFuel = float(Devices[UNIT_FUEL_INDEX].sValue)
+            except ValueError:
+                self._lastFuel = 0
+                        
     def onStop(self):
         self._client = None
         if self._loop:
