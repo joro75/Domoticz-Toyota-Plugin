@@ -12,6 +12,7 @@ can retrieve the information, which is then provided as several sensors in Domot
 * Retrieve actual mileage
 * Retrieve actual fuel level percentage
 * Shows the distance between the car and home
+* Shows the locked / unlocked state of the car
 
 ## Dependencies
 This plugin uses the 'mytoyota' library to communicatie with the Toyota
