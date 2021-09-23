@@ -301,7 +301,8 @@ def onHeartbeat():
 def DumpConfigToLog():
     for x in Parameters:
         if Parameters[x] != '':
-            Domoticz.Debug( "'" + x + "':'" + str(Parameters[x]) + "'")
+            value = '******' if x.lower() in ['username', 'password'] else str(Parameters[x])
+            Domoticz.Debug( "'" + x + "': '" + value + "'")
     Domoticz.Debug("Device count: " + str(len(Devices)))
     for x in Devices:
         Domoticz.Debug("Device:           " + str(x) + " - " + str(Devices[x]))
