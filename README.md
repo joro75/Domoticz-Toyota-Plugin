@@ -28,4 +28,7 @@ A huge thanks goes to [@DurgNomis-drol](https://github.com/DurgNomis-drol/) for 
 
 For the icons we used the following icons from the [Noun Project](https://thenounproject.com):
 * [fuel meter](https://thenounproject.com/search/?q=fuel+meter&i=2690780#) by Phonlaphat Thongsriphong from the Noun Project
+* [unlocked](https://thenounproject.com/andrejs/collection/view-thin/?i=3863254) by Andrejs Kirma from the Noun Project
+* [locked](https://thenounproject.com/search/?q=car+locked&i=3863407#) by Andrejs Kirma from the Noun Project
+
 

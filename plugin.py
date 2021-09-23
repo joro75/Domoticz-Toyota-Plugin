@@ -29,6 +29,7 @@
             <li>Mileage - The actual mileage of the car</li>
             <li>Fuel level - The actual fuel level of the car</li>
             <li>Distance to home - The actual distance between the car and home</li>
+            <li>Locked - The actual status if the car is locked or unlocked</li>
         </ul>
         <h3>Configuration</h3>
         <ul style="list-style-type:square">
@@ -61,6 +62,8 @@ UNIT_MILEAGE_INDEX: int = 1
 UNIT_FUEL_INDEX: int = 2
 
 UNIT_DISTANCE_INDEX: int = 3
+
+UNIT_CAR_LOCKED_INDEX: int = 4
 
 class ToyotaPlugin:
     def __init__(self):
@@ -160,7 +163,18 @@ class ToyotaPlugin:
                         # Round it to meters.
                         dist = round(dist, 3)
                         Devices[UNIT_DISTANCE_INDEX].Update(nValue=0, sValue=f'{dist}')
-
+            
+            if not vehicle.status.doors is None:
+                if UNIT_CAR_LOCKED_INDEX in Devices:
+                    locked = True
+                    for door in vehicle.status.doors.as_dict():
+                        try:
+                            locked = locked and door.get('locked', True)
+                        except AttributeError:
+                            pass
+                    state = 1 if locked else 0
+                    Devices[UNIT_CAR_LOCKED_INDEX].Update(nValue=state, sValue=str(state))
+                            
     def _createDevices(self):
         vehicle = self._retrieveVehicleStatus()
         if not vehicle is None:
@@ -187,7 +201,16 @@ class ToyotaPlugin:
                                 Used=1,
                                 Description='The distance between home and the car'
                                 ).Create()
-    
+            if not UNIT_CAR_LOCKED_INDEX in Devices or Devices[UNIT_CAR_LOCKED_INDEX] is None:
+                #Images['ToyotaLocked'].Delete()
+                Domoticz.Image('ToyotaLocked.zip').Create()
+                Domoticz.Device(Name='Locked', Unit=UNIT_CAR_LOCKED_INDEX,
+                                TypeName='Light/Switch', Type=244, Subtype=73, Switchtype=19,
+                                Used=1,
+                                Description='The locked/unlocked state of the car',
+                                Image=Images['ToyotaLocked'].ID
+                                ).Create()    
+                                
     def onStart(self):
         Domoticz.Debugging(1)
         DumpConfigToLog()
