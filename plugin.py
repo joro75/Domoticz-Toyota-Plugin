@@ -91,6 +91,8 @@ UNIT_DISTANCE_INDEX: int = 3
 UNIT_CAR_LOCKED_INDEX: int = 4
 
 class ToyotaPlugin:
+    """Domoticz plugin function implementation to get information from Toyota MyT."""
+    
     def __init__(self):
         self._heartbeat_count = 100
         self._logged_on = False
@@ -99,6 +101,7 @@ class ToyotaPlugin:
         return
     
     def _lookup_car(self, cars, identifier):
+        """Find and eturn the first car from cars that confirms to the passed identifier."""
         if not cars is None and len(identifier) > 0:
             id = identifier.upper().strip()
             for car in cars:
@@ -113,6 +116,7 @@ class ToyotaPlugin:
         return None
 
     def _connect_to_MyT(self):
+        """Connect to the Toyota MyT servers."""
         self._logged_on = False
         self._loop = asyncio.get_event_loop()
         cars = None
@@ -138,13 +142,14 @@ class ToyotaPlugin:
         else:
             Domoticz.Error('Logon failed')
             
-            
     def _ensure_connected(self):
+        """Check and return if a connection to Toyota MyT servers is present, also trying to connect."""
         if not self._is_connected():
             self._connect_to_MyT()
         return self._is_connected()
         
     def _is_connected(self):
+        """Check and return if a connection to Toyota MyT servers is present."""
         connected = False
         if self._logged_on:
             if self._loop:
@@ -153,6 +158,7 @@ class ToyotaPlugin:
         return connected
 
     def _retrieve_vehicle_status(self):
+        """Retrieve and return the status information of the vehicle."""
         vehicle = None
         if self._ensure_connected():
             Domoticz.Log('Updating vehicle status')
@@ -165,6 +171,7 @@ class ToyotaPlugin:
         return vehicle
             
     def _update_sensors(self):
+        """Retreive the status of the vehicle and update the Domoticz sensors."""
         vehicle = self._retrieve_vehicle_status()
         if not vehicle is None:
             if not vehicle.odometer is None:
@@ -201,6 +208,7 @@ class ToyotaPlugin:
                     Devices[UNIT_CAR_LOCKED_INDEX].Update(nValue=state, sValue=str(state))
                             
     def _create_devices(self):
+        """Create the appropiate sensors in Domoticz for the vehicle."""
         vehicle = self._retrieve_vehicle_status()
         if not vehicle is None:
             if not UNIT_MILEAGE_INDEX in Devices or Devices[UNIT_MILEAGE_INDEX] is None:
@@ -227,7 +235,6 @@ class ToyotaPlugin:
                                 Description='The distance between home and the car'
                                 ).Create()
             if not UNIT_CAR_LOCKED_INDEX in Devices or Devices[UNIT_CAR_LOCKED_INDEX] is None:
-                #Images['ToyotaLocked'].Delete()
                 Domoticz.Image('ToyotaLocked.zip').Create()
                 Domoticz.Device(Name='Locked', Unit=UNIT_CAR_LOCKED_INDEX,
                                 TypeName='Light/Switch', Type=244, Subtype=73, Switchtype=19,
@@ -237,6 +244,7 @@ class ToyotaPlugin:
                                 ).Create()    
                                 
     def onStart(self):
+        """Callback from Domoticz that the plugin is started."""
         Domoticz.Debugging(1)
         DumpConfigToLog()
 
@@ -262,26 +270,13 @@ class ToyotaPlugin:
                 self._last_fuel = 0
                         
     def onStop(self):
+        """Callback from Domoticz that the plugin is stopped."""
         self._client = None
         if self._loop:
             self._loop.close()
 
-    def onConnect(self, Connection, Status, Description):
-        Domoticz.Log("onConnect called")
-
-    def onMessage(self, Connection, Data):
-        Domoticz.Log("onMessage called")
-
-    def onCommand(self, Unit, Command, Level, Hue):
-        Domoticz.Log("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
-
-    def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
-        Domoticz.Log("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
-
-    def onDisconnect(self, Connection):
-        Domoticz.Log("onDisconnect called")
-        
     def onHeartbeat(self):
+        """Callback from Domoticz that the plugin can perform some work."""
         self._heartbeat_count += 1
         if self._heartbeat_count > 10:
             self._heartbeat_count = 0
@@ -291,6 +286,7 @@ global _plugin
 _plugin = ToyotaPlugin()
 
 def onStart():
+    """Callback from Domoticz that the plugin is started."""
     if sys.version_info < MINIMUM_PYTHON_VERSION:
         Domoticz.Error(f'Python version {sys.version_info} is not supported, at least {MINIMUM_PYTHON_VERSION} is required.')
     else:
@@ -302,35 +298,17 @@ def onStart():
             _plugin.onStart()
 
 def onStop():
+    """Callback from Domoticz that the plugin is stopped."""
     global _plugin
     _plugin.onStop()
 
-def onConnect(Connection, Status, Description):
-    global _plugin
-    _plugin.onConnect(Connection, Status, Description)
-
-def onMessage(Connection, Data):
-    global _plugin
-    _plugin.onMessage(Connection, Data)
-
-def onCommand(Unit, Command, Level, Hue):
-    global _plugin
-    _plugin.onCommand(Unit, Command, Level, Hue)
-
-def onNotification(Name, Subject, Text, Status, Priority, Sound, ImageFile):
-    global _plugin
-    _plugin.onNotification(Name, Subject, Text, Status, Priority, Sound, ImageFile)
-
-def onDisconnect(Connection):
-    global _plugin
-    _plugin.onDisconnect(Connection)
-
 def onHeartbeat():
+    """Callback from Domoticz that the plugin can perform some work."""
     global _plugin
     _plugin.onHeartbeat()
 
-# Generic helper functions
 def DumpConfigToLog():
+    """Dump the configuration of the plugin to the Domoticz debug log."""
     for x in Parameters:
         if Parameters[x] != '':
             value = '******' if x.lower() in ['username', 'password'] else str(Parameters[x])
