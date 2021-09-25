@@ -1,7 +1,11 @@
-# Domoticz-Toyota-Plugin
+# Copyright (C) 2021 John de Rooij
 #
-# Author: John de Rooij
+# This software is licensed as described in the file LICENSE, which
+# you should have received as part of this distribution.
 #
+# Domoticz-Toyota-Plugin   ( https://github.com/joro75/Domoticz-Toyota-Plugin )
+#
+# CodingGuidelines 2020-04-11 
 """
 <plugin key="Toyota" name="Toyota" author="joro75" version="0.1.0" externallink="https://github.com/joro75/Domoticz-Toyota-Plugin">
     <description>
@@ -49,14 +53,35 @@
 </plugin>
 """
 
-import Domoticz
+import sys
 import json
 import asyncio
-import mytoyota
-from mytoyota.client import MyT
-import mytoyota.exceptions
-import geopy.distance
 
+global _importErrors
+_importErrors = ''
+
+try:
+    import Domoticz
+except ImportError:
+    _importErrors += ('The Python Domoticz library is not installed. '
+                      'This plugin can only be installed in Domoticz. Check your Domoticz installation')
+    
+try:
+    import mytoyota
+    from mytoyota.client import MyT
+    import mytoyota.exceptions
+except ImportError:
+    _importErrors += ('The Python mytoyota library is not installed. '
+                      'Use pip to install mytoyota: pip3 install -r requirements.txt')
+
+try:
+    import geopy.distance
+except ImportError:
+    _importErrors += ('The python geopy library is not installed. '
+                      'Use pip to install geopy: pip3 install -r requirements.txt')
+                   
+MINIMUM_PYTHON_VERSION = (3, 6)
+    
 UNIT_MILEAGE_INDEX: int = 1
 
 UNIT_FUEL_INDEX: int = 2
@@ -67,13 +92,13 @@ UNIT_CAR_LOCKED_INDEX: int = 4
 
 class ToyotaPlugin:
     def __init__(self):
-        self._heartbeatCount = 100
-        self._loggedOn = False
-        self._lastMileage = 0
-        self._lastFuel = 0
+        self._heartbeat_count = 100
+        self._logged_on = False
+        self._last_mileage = 0
+        self._last_fuel = 0
         return
     
-    def _lookupCar(self, cars, identifier):
+    def _lookup_car(self, cars, identifier):
         if not cars is None and len(identifier) > 0:
             id = identifier.upper().strip()
             for car in cars:
@@ -87,8 +112,8 @@ class ToyotaPlugin:
                     return car
         return None
 
-    def _connectToMyT(self):
-        self._loggedOn = False
+    def _connect_to_MyT(self):
+        self._logged_on = False
         self._loop = asyncio.get_event_loop()
         cars = None
         try:
@@ -98,38 +123,38 @@ class ToyotaPlugin:
                                region='europe')
             self._loop.run_until_complete(self._client.login())
             cars = self._loop.run_until_complete(self._client.get_vehicles())
-            self._loggedOn = True
+            self._logged_on = True
         except mytoyota.exceptions.ToyotaLoginError as ex:
             Domoticz.Error(f'Login Error: {ex}')
         except mytoyota.exceptions.ToyotaInvalidUsername as ex:
             Domoticz.Error(f'Invalid username: {ex}')
-        if self._loggedOn:
+        if self._logged_on:
             Domoticz.Log('Succesfully logged on')
-            self._car = self._lookupCar(cars, Parameters['Mode2'])
+            self._car = self._lookup_car(cars, Parameters['Mode2'])
             if self._car is None:
-                self._car = self._lookupCar(cars, Parameters['Name'])
+                self._car = self._lookup_car(cars, Parameters['Name'])
             if self._car is None:
                 Domoticz.Error('Could not find the desired car in the MyT information')
         else:
             Domoticz.Error('Logon failed')
             
             
-    def _ensureConnected(self):
-        if not self._isConnected():
-            self._connectToMyT()
-        return self._isConnected()
+    def _ensure_connected(self):
+        if not self._is_connected():
+            self._connect_to_MyT()
+        return self._is_connected()
         
-    def _isConnected(self):
+    def _is_connected(self):
         connected = False
-        if self._loggedOn:
+        if self._logged_on:
             if self._loop:
                 if self._car:
                     connected = True
         return connected
 
-    def _retrieveVehicleStatus(self):
+    def _retrieve_vehicle_status(self):
         vehicle = None
-        if self._ensureConnected():
+        if self._ensure_connected():
             Domoticz.Log('Updating vehicle status')
             try:
                 vehicle = self._loop.run_until_complete(self._client.get_vehicle_status(self._car))
@@ -139,27 +164,27 @@ class ToyotaPlugin:
             Domoticz.Error('Vehicle status could not be retrieved')    
         return vehicle
             
-    def _updateSensors(self):
-        vehicle = self._retrieveVehicleStatus()
+    def _update_sensors(self):
+        vehicle = self._retrieve_vehicle_status()
         if not vehicle is None:
             if not vehicle.odometer is None:
                 if UNIT_MILEAGE_INDEX in Devices:
                     mileage = vehicle.odometer.mileage
-                    diff = mileage - self._lastMileage
+                    diff = mileage - self._last_mileage
                     if diff != 0:
                         Devices[UNIT_MILEAGE_INDEX].Update(nValue=0, sValue=f'{diff}')
-                        self._lastMileage = mileage
+                        self._last_mileage = mileage
                 if UNIT_FUEL_INDEX in Devices:
                     fuel = vehicle.odometer.fuel
-                    if fuel != self._lastFuel:
+                    if fuel != self._last_fuel:
                         Devices[UNIT_FUEL_INDEX].Update(nValue=int(float(fuel)), sValue=str(fuel))
-                        self._lastFuel = fuel
+                        self._last_fuel = fuel
             
             if not vehicle.parking is None:
-                if not self._coordinatesHome is None:
+                if not self._coordinates_home is None:
                     if UNIT_DISTANCE_INDEX in Devices:
                         coords_car = (float(vehicle.parking.latitude), float(vehicle.parking.longitude))
-                        dist = geopy.distance.distance(self._coordinatesHome, coords_car).km
+                        dist = geopy.distance.distance(self._coordinates_home, coords_car).km
                         # Round it to meters.
                         dist = round(dist, 3)
                         Devices[UNIT_DISTANCE_INDEX].Update(nValue=0, sValue=f'{dist}')
@@ -175,8 +200,8 @@ class ToyotaPlugin:
                     state = 1 if locked else 0
                     Devices[UNIT_CAR_LOCKED_INDEX].Update(nValue=state, sValue=str(state))
                             
-    def _createDevices(self):
-        vehicle = self._retrieveVehicleStatus()
+    def _create_devices(self):
+        vehicle = self._retrieve_vehicle_status()
         if not vehicle is None:
             if not UNIT_MILEAGE_INDEX in Devices or Devices[UNIT_MILEAGE_INDEX] is None:
                 Domoticz.Device(Name='Mileage', Unit=UNIT_MILEAGE_INDEX, 
@@ -215,26 +240,26 @@ class ToyotaPlugin:
         Domoticz.Debugging(1)
         DumpConfigToLog()
 
-        self._coordinatesHome = None
+        self._coordinates_home = None
         if len(Settings['Location']) > 0:
             try:
-                self._coordinatesHome = tuple([float(part) for part in Settings['Location'].split(';')])
+                self._coordinates_home = tuple([float(part) for part in Settings['Location'].split(';')])
             except ValueError:
                 pass
                             
-        self._createDevices()
+        self._create_devices()
                 
         # Retrieve the last mileage that is already known in Domoticz
         if UNIT_MILEAGE_INDEX in Devices and not Devices[UNIT_MILEAGE_INDEX] is None:
             try:
-                self._lastMileage = int(Devices[UNIT_MILEAGE_INDEX].sValue)
+                self._last_mileage = int(Devices[UNIT_MILEAGE_INDEX].sValue)
             except ValueError:
-                self._lastMileage = 0
+                self._last_mileage = 0
         if UNIT_FUEL_INDEX in Devices and not Devices[UNIT_FUEL_INDEX] is None:
             try:
-                self._lastFuel = float(Devices[UNIT_FUEL_INDEX].sValue)
+                self._last_fuel = float(Devices[UNIT_FUEL_INDEX].sValue)
             except ValueError:
-                self._lastFuel = 0
+                self._last_fuel = 0
                         
     def onStop(self):
         self._client = None
@@ -257,17 +282,24 @@ class ToyotaPlugin:
         Domoticz.Log("onDisconnect called")
         
     def onHeartbeat(self):
-        self._heartbeatCount += 1
-        if self._heartbeatCount > 10:
-            self._heartbeatCount = 0
-            self._updateSensors()
+        self._heartbeat_count += 1
+        if self._heartbeat_count > 10:
+            self._heartbeat_count = 0
+            self._update_sensors()
                                                 
 global _plugin
 _plugin = ToyotaPlugin()
 
 def onStart():
-    global _plugin
-    _plugin.onStart()
+    if sys.version_info < MINIMUM_PYTHON_VERSION:
+        Domoticz.Error(f'Python version {sys.version_info} is not supported, at least {MINIMUM_PYTHON_VERSION} is required.')
+    else:
+        global _importErrors
+        if _importErrors:
+            Domoticz.Error(_importErrors)
+        else:
+            global _plugin
+            _plugin.onStart()
 
 def onStop():
     global _plugin
