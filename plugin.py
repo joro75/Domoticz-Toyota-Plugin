@@ -81,6 +81,7 @@ except ImportError:
                       'Use pip to install geopy: pip3 install -r requirements.txt')
                    
 MINIMUM_PYTHON_VERSION = (3, 6)
+DO_DOMOTICZ_DEBUGGING: bool = False
     
 UNIT_MILEAGE_INDEX: int = 1
 
@@ -98,6 +99,7 @@ class ToyotaPlugin:
         self._logged_on = False
         self._last_mileage = 0
         self._last_fuel = 0
+        self._coordinates_home = None
         return
     
     def _lookup_car(self, cars, identifier):
@@ -245,8 +247,9 @@ class ToyotaPlugin:
                                 
     def onStart(self):
         """Callback from Domoticz that the plugin is started."""
-        Domoticz.Debugging(1)
-        DumpConfigToLog()
+        if DO_DOMOTICZ_DEBUGGING:
+            Domoticz.Debugging(1)
+            DumpConfigToLog()
 
         self._coordinates_home = None
         if len(Settings['Location']) > 0:
