@@ -54,10 +54,8 @@
 """
 
 import sys
-import json
 import asyncio
 
-global _importErrors
 _importErrors = ''
 
 try:
@@ -65,7 +63,7 @@ try:
 except ImportError:
     _importErrors += ('The Python Domoticz library is not installed. '
                       'This plugin can only be installed in Domoticz. Check your Domoticz installation')
-    
+
 try:
     import mytoyota
     from mytoyota.client import MyT
@@ -105,15 +103,15 @@ class ToyotaPlugin:
     def _lookup_car(self, cars, identifier):
         """Find and eturn the first car from cars that confirms to the passed identifier."""
         if not cars is None and len(identifier) > 0:
-            id = identifier.upper().strip()
+            car_id = identifier.upper().strip()
             for car in cars:
-                if id in car.get('alias', '').upper():
+                if car_id in car.get('alias', '').upper():
                     return car
-                if id in car.get('licensePlate', '').upper():
+                if car_id in car.get('licensePlate', '').upper():
                     return car
-                if id in car.get('vin', '').upper():
+                if car_id in car.get('vin', '').upper():
                     return car
-                if id in car.get('modelName', '').upper():
+                if car_id in car.get('modelName', '').upper():
                     return car
         return None
 
@@ -171,7 +169,7 @@ class ToyotaPlugin:
         if vehicle is None:
             Domoticz.Error('Vehicle status could not be retrieved')    
         return vehicle
-            
+
     def _update_sensors(self):
         """Retreive the status of the vehicle and update the Domoticz sensors."""
         vehicle = self._retrieve_vehicle_status()
@@ -188,7 +186,7 @@ class ToyotaPlugin:
                     if fuel != self._last_fuel:
                         Devices[UNIT_FUEL_INDEX].Update(nValue=int(float(fuel)), sValue=str(fuel))
                         self._last_fuel = fuel
-            
+
             if not vehicle.parking is None:
                 if not self._coordinates_home is None:
                     if UNIT_DISTANCE_INDEX in Devices:
@@ -197,7 +195,7 @@ class ToyotaPlugin:
                         # Round it to meters.
                         dist = round(dist, 3)
                         Devices[UNIT_DISTANCE_INDEX].Update(nValue=0, sValue=f'{dist}')
-            
+
             if not vehicle.status.doors is None:
                 if UNIT_CAR_LOCKED_INDEX in Devices:
                     locked = True
@@ -208,13 +206,13 @@ class ToyotaPlugin:
                             pass
                     state = 1 if locked else 0
                     Devices[UNIT_CAR_LOCKED_INDEX].Update(nValue=state, sValue=str(state))
-                            
+
     def _create_devices(self):
         """Create the appropiate sensors in Domoticz for the vehicle."""
         vehicle = self._retrieve_vehicle_status()
         if not vehicle is None:
             if not UNIT_MILEAGE_INDEX in Devices or Devices[UNIT_MILEAGE_INDEX] is None:
-                Domoticz.Device(Name='Mileage', Unit=UNIT_MILEAGE_INDEX, 
+                Domoticz.Device(Name='Mileage', Unit=UNIT_MILEAGE_INDEX,
                                 TypeName='Counter Incremental', Switchtype=3,
                                 Used=1,
                                 Description='Counter to hold the overall mileage',
@@ -243,8 +241,8 @@ class ToyotaPlugin:
                                 Used=1,
                                 Description='The locked/unlocked state of the car',
                                 Image=Images['ToyotaLocked'].ID
-                                ).Create()    
-                                
+                                ).Create()
+
     def onStart(self):
         """Callback from Domoticz that the plugin is started."""
         if DO_DOMOTICZ_DEBUGGING:
@@ -257,9 +255,9 @@ class ToyotaPlugin:
                 self._coordinates_home = tuple([float(part) for part in Settings['Location'].split(';')])
             except ValueError:
                 pass
-                            
+
         self._create_devices()
-                
+
         # Retrieve the last mileage that is already known in Domoticz
         if UNIT_MILEAGE_INDEX in Devices and not Devices[UNIT_MILEAGE_INDEX] is None:
             try:
@@ -271,7 +269,7 @@ class ToyotaPlugin:
                 self._last_fuel = float(Devices[UNIT_FUEL_INDEX].sValue)
             except ValueError:
                 self._last_fuel = 0
-                        
+
     def onStop(self):
         """Callback from Domoticz that the plugin is stopped."""
         self._client = None
@@ -284,8 +282,7 @@ class ToyotaPlugin:
         if self._heartbeat_count > 10:
             self._heartbeat_count = 0
             self._update_sensors()
-                                                
-global _plugin
+
 _plugin = ToyotaPlugin()
 
 def onStart():
@@ -293,36 +290,30 @@ def onStart():
     if sys.version_info < MINIMUM_PYTHON_VERSION:
         Domoticz.Error(f'Python version {sys.version_info} is not supported, at least {MINIMUM_PYTHON_VERSION} is required.')
     else:
-        global _importErrors
         if _importErrors:
             Domoticz.Error(_importErrors)
         else:
-            global _plugin
             _plugin.onStart()
 
 def onStop():
     """Callback from Domoticz that the plugin is stopped."""
-    global _plugin
     _plugin.onStop()
 
 def onHeartbeat():
     """Callback from Domoticz that the plugin can perform some work."""
-    global _plugin
     _plugin.onHeartbeat()
 
 def DumpConfigToLog():
     """Dump the configuration of the plugin to the Domoticz debug log."""
-    for x in Parameters:
-        if Parameters[x] != '':
-            value = '******' if x.lower() in ['username', 'password'] else str(Parameters[x])
-            Domoticz.Debug( "'" + x + "': '" + value + "'")
-    Domoticz.Debug("Device count: " + str(len(Devices)))
-    for x in Devices:
-        Domoticz.Debug("Device:           " + str(x) + " - " + str(Devices[x]))
-        Domoticz.Debug("Device ID:       '" + str(Devices[x].ID) + "'")
-        Domoticz.Debug("Device Name:     '" + Devices[x].Name + "'")
-        Domoticz.Debug("Device nValue:    " + str(Devices[x].nValue))
-        Domoticz.Debug("Device sValue:   '" + Devices[x].sValue + "'")
-        Domoticz.Debug("Device LastLevel: " + str(Devices[x].LastLevel))
-    return
-    
+    for key in Parameters:
+        if Parameters[key] != '':
+            value = '******' if key.lower() in ['username', 'password'] else str(Parameters[key])
+            Domoticz.Debug(f'\'{key}\': \'{value}\'')
+    Domoticz.Debug(f'Device count: {str(len(Devices))}')
+    for key in Devices:
+        Domoticz.Debug(f'Device:           {str(key)} - {str(Devices[key])}')
+        Domoticz.Debug(f'Device ID:       \'{str(Devices[key].ID)}\'')
+        Domoticz.Debug(f'Device Name:     \'{Devices[key].Name}\'')
+        Domoticz.Debug(f'Device nValue:    {str(Devices[key].nValue)}')
+        Domoticz.Debug(f'Device sValue:   \'{Devices[key].sValue}\'')
+        Domoticz.Debug(f'Device LastLevel: {str(Devices[key].LastLevel)}')
