@@ -86,7 +86,7 @@ except ImportError:
                       'Use pip to install geopy: pip3 install -r requirements.txt')
 
 MINIMUM_PYTHON_VERSION = (3, 6)
-DO_DOMOTICZ_DEBUGGING: bool = True
+DO_DOMOTICZ_DEBUGGING: bool = False
 
 UNIT_MILEAGE_INDEX: int = 1
 
@@ -95,12 +95,6 @@ UNIT_FUEL_INDEX: int = 2
 UNIT_DISTANCE_INDEX: int = 3
 
 UNIT_CAR_LOCKED_INDEX: int = 4
-
-## make pylint think that it knows about 'internal Domoticz' variables
-#Devices = Devices  	# pylint:disable=invalid-name,used-before-assignment, undefined-variable
-#Parameters = Parameters # pylint:disable=invalid-name,used-before-assignment, undefined-variable
-#Images = Images    	# pylint:disable=invalid-name,used-before-assignment, undefined-variable
-#Settings = Settings	# pylint:disable=invalid-name,used-before-assignment, undefined-variable
 
 class ReducedHeartBeat(ABC):
     """Helper class that only calls the update of the sensors every ... heartbeat."""
