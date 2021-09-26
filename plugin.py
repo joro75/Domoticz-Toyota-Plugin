@@ -5,23 +5,26 @@
 #
 # Domoticz-Toyota-Plugin   ( https://github.com/joro75/Domoticz-Toyota-Plugin )
 #
-# CodingGuidelines 2020-04-11 
+# CodingGuidelines 2020-04-11
 """
-<plugin key="Toyota" name="Toyota" author="joro75" version="0.1.0" externallink="https://github.com/joro75/Domoticz-Toyota-Plugin">
+<plugin key="Toyota" name="Toyota" author="joro75" version="0.1.0"
+        externallink="https://github.com/joro75/Domoticz-Toyota-Plugin">
     <description>
         <h2>Domoticz Toyota Plugin 0.1.0</h2>
         <p>
         A Domoticz plugin that provides sensors for a Toyota car with connected services.
         </p>
         <p>
-        It is using the same API that is used by the Toyota MyT connected services. This API is however only useable
-        for cars that are purchased in Europe. For more information of Toyota MyT see: 
+        It is using the same API that is used by the Toyota MyT connected services.
+        This API is however only useable for cars that are purchased in Europe.
+        For more information of Toyota MyT see:
         <a href="https://www.toyota-europe.com/service-and-accessories/my-toyota/myt">
         https://www.toyota-europe.com/service-and-accessories/my-toyota/myt</a>
         </p>
         <p>
-        The Toyota car should first be made available in the MyT connected services, after which this plugin
-        can retrieve the information, which is then provided as several sensors in Domoticz.
+        The Toyota car should first be made available in the MyT connected services,
+        after which this plugin can retrieve the information, which is then provided as
+        several sensors in Domoticz.
         </p>
         <h3>Features</h3>
         <ul style="list-style-type:square">
@@ -39,9 +42,11 @@
         <ul style="list-style-type:square">
             <li>Username - The username that is also used to login in the myT application.</li>
             <li>Password - The password that is also used to login in the myT application.</li>
-            <li>Locale - The locale that should be used. This can be for example 'en-gb' or another locale. 'en-us' doesn't seem to work!</li>
-            <li>Car - An identifier for the car for which the data should be retrieved, if multiple cars are present in the myT application.
-            It can be a part of the VIN number, alias, licenseplate or the model.</li>
+            <li>Locale - The locale that should be used. This can be for example 'en-gb'
+                or another locale. 'en-us' doesn't seem to work!</li>
+            <li>Car - An identifier for the car for which the data should be retrieved,
+                if multiple cars are present in the myT application.
+                It can be a part of the VIN number, alias, licenseplate or the model.</li>
         </ul>
     </description>
     <params>
@@ -54,15 +59,17 @@
 """
 
 import sys
+from abc import ABC, abstractmethod
 import asyncio
 
-_importErrors = ''
+_importErrors: str = str()		# pylint:disable=invalid-name
 
 try:
     import Domoticz
 except ImportError:
     _importErrors += ('The Python Domoticz library is not installed. '
-                      'This plugin can only be installed in Domoticz. Check your Domoticz installation')
+                      'This plugin can only be installed in Domoticz. '
+                      'Check your Domoticz installation')
 
 try:
     import mytoyota
@@ -77,10 +84,10 @@ try:
 except ImportError:
     _importErrors += ('The python geopy library is not installed. '
                       'Use pip to install geopy: pip3 install -r requirements.txt')
-                   
+
 MINIMUM_PYTHON_VERSION = (3, 6)
 DO_DOMOTICZ_DEBUGGING: bool = False
-    
+
 UNIT_MILEAGE_INDEX: int = 1
 
 UNIT_FUEL_INDEX: int = 2
@@ -89,20 +96,46 @@ UNIT_DISTANCE_INDEX: int = 3
 
 UNIT_CAR_LOCKED_INDEX: int = 4
 
-class ToyotaPlugin:
-    """Domoticz plugin function implementation to get information from Toyota MyT."""
-    
+## make pylint think that it knows about 'internal Domoticz' variables
+#Devices = Devices  	# pylint:disable=invalid-name,used-before-assignment, undefined-variable
+#Parameters = Parameters # pylint:disable=invalid-name,used-before-assignment, undefined-variable
+#Images = Images    	# pylint:disable=invalid-name,used-before-assignment, undefined-variable
+#Settings = Settings	# pylint:disable=invalid-name,used-before-assignment, undefined-variable
+
+class ReducedHeartBeat(ABC):
+    """Helper class that only calls the update of the sensors every ... heartbeat."""
+
+    _heartbeat_interval = 10
+
     def __init__(self):
-        self._heartbeat_count = 100
-        self._logged_on = False
-        self._last_mileage = 0
-        self._last_fuel = 0
-        self._coordinates_home = None
+        super().__init__()
+        self._heartbeat_count = self._heartbeat_interval
+
+    def onHeartbeat(self):	# pylint:disable=invalid-name
+        """Callback from Domoticz that the plugin can perform some work."""
+        self._heartbeat_count += 1
+        if self._heartbeat_count > self._heartbeat_interval:
+            self._heartbeat_count = 0
+            self.update_sensors()
+
+    @abstractmethod
+    def update_sensors(self):
+        """Retrieve the status of the device and update the Domoticz sensors."""
         return
-    
-    def _lookup_car(self, cars, identifier):
+
+class ToyotaMyTConnector():
+    """Provide a connection to the Toyota MyT service."""
+
+    def __init__(self):
+        super().__init__()
+        self._logged_on = False
+        self._loop = None
+        self._client = None
+        self._car = None
+
+    def _lookup_car(self, cars, identifier):    # pylint:disable=no-self-use
         """Find and eturn the first car from cars that confirms to the passed identifier."""
-        if not cars is None and len(identifier) > 0:
+        if not cars is None and identifier:
             car_id = identifier.upper().strip()
             for car in cars:
                 if car_id in car.get('alias', '').upper():
@@ -115,7 +148,7 @@ class ToyotaPlugin:
                     return car
         return None
 
-    def _connect_to_MyT(self):
+    def _connect_to_myt(self):
         """Connect to the Toyota MyT servers."""
         self._logged_on = False
         self._loop = asyncio.get_event_loop()
@@ -141,13 +174,16 @@ class ToyotaPlugin:
                 Domoticz.Error('Could not find the desired car in the MyT information')
         else:
             Domoticz.Error('Logon failed')
-            
+
     def _ensure_connected(self):
-        """Check and return if a connection to Toyota MyT servers is present, also trying to connect."""
+        """
+        Check and return if a connection to Toyota MyT servers is present,
+        also trying to connect.
+        """
         if not self._is_connected():
-            self._connect_to_MyT()
+            self._connect_to_myt()
         return self._is_connected()
-        
+
     def _is_connected(self):
         """Check and return if a connection to Toyota MyT servers is present."""
         connected = False
@@ -157,22 +193,37 @@ class ToyotaPlugin:
                     connected = True
         return connected
 
-    def _retrieve_vehicle_status(self):
+    def retrieve_vehicle_status(self):
         """Retrieve and return the status information of the vehicle."""
         vehicle = None
         if self._ensure_connected():
             Domoticz.Log('Updating vehicle status')
             try:
                 vehicle = self._loop.run_until_complete(self._client.get_vehicle_status(self._car))
-            except mytoyota.Exceptions.ToyotaInternalError:
+            except mytoyota.exceptions.ToyotaInternalError:
                 pass
         if vehicle is None:
-            Domoticz.Error('Vehicle status could not be retrieved')    
+            Domoticz.Error('Vehicle status could not be retrieved')
         return vehicle
 
-    def _update_sensors(self):
-        """Retreive the status of the vehicle and update the Domoticz sensors."""
-        vehicle = self._retrieve_vehicle_status()
+    def disconnect(self):
+        """Disconnect from the Toyota MyT servers."""
+        self._client = None
+        if self._loop:
+            self._loop.close()
+
+class ToyotaPlugin(ReducedHeartBeat, ToyotaMyTConnector):
+    """Domoticz plugin function implementation to get information from Toyota MyT."""
+
+    def __init__(self):
+        super().__init__()
+        self._last_mileage = 0
+        self._last_fuel = 0
+        self._coordinates_home = None
+
+    def update_sensors(self):
+        """Retrieve the status of the vehicle and update the Domoticz sensors."""
+        vehicle = self.retrieve_vehicle_status()
         if not vehicle is None:
             if not vehicle.odometer is None:
                 if UNIT_MILEAGE_INDEX in Devices:
@@ -190,7 +241,8 @@ class ToyotaPlugin:
             if not vehicle.parking is None:
                 if not self._coordinates_home is None:
                     if UNIT_DISTANCE_INDEX in Devices:
-                        coords_car = (float(vehicle.parking.latitude), float(vehicle.parking.longitude))
+                        coords_car = (float(vehicle.parking.latitude),
+                                      float(vehicle.parking.longitude))
                         dist = geopy.distance.distance(self._coordinates_home, coords_car).km
                         # Round it to meters.
                         dist = round(dist, 3)
@@ -209,7 +261,7 @@ class ToyotaPlugin:
 
     def _create_devices(self):
         """Create the appropiate sensors in Domoticz for the vehicle."""
-        vehicle = self._retrieve_vehicle_status()
+        vehicle = self.retrieve_vehicle_status()
         if not vehicle is None:
             if not UNIT_MILEAGE_INDEX in Devices or Devices[UNIT_MILEAGE_INDEX] is None:
                 Domoticz.Device(Name='Mileage', Unit=UNIT_MILEAGE_INDEX,
@@ -221,14 +273,14 @@ class ToyotaPlugin:
                                 ).Create()
             if not UNIT_FUEL_INDEX in Devices or Devices[UNIT_FUEL_INDEX] is None:
                 Domoticz.Image('ToyotaFuelMeter.zip').Create()
-                Domoticz.Device(Name='Fuel level', Unit=UNIT_FUEL_INDEX, 
+                Domoticz.Device(Name='Fuel level', Unit=UNIT_FUEL_INDEX,
                                 TypeName='Percentage',
                                 Used=1,
                                 Description='The filled percentage of the fuel tank',
                                 Image=Images['ToyotaFuelMeter'].ID
                                 ).Create()
             if not UNIT_DISTANCE_INDEX in Devices or Devices[UNIT_DISTANCE_INDEX] is None:
-                Domoticz.Device(Name='Distance to home', Unit=UNIT_DISTANCE_INDEX, 
+                Domoticz.Device(Name='Distance to home', Unit=UNIT_DISTANCE_INDEX,
                                 TypeName='Custom Sensor', Type=243, Subtype=31,
                                 Options={'Custom': '1;km'},
                                 Used=1,
@@ -243,16 +295,17 @@ class ToyotaPlugin:
                                 Image=Images['ToyotaLocked'].ID
                                 ).Create()
 
-    def onStart(self):
+    def onStart(self):		# pylint:disable=invalid-name
         """Callback from Domoticz that the plugin is started."""
         if DO_DOMOTICZ_DEBUGGING:
             Domoticz.Debugging(1)
-            DumpConfigToLog()
+            dump_config_to_log()
 
         self._coordinates_home = None
-        if len(Settings['Location']) > 0:
+        if Settings['Location']:
             try:
-                self._coordinates_home = tuple([float(part) for part in Settings['Location'].split(';')])
+                self._coordinates_home = tuple([float(part) for part in
+                                                Settings['Location'].split(';')])
             except ValueError:
                 pass
 
@@ -270,40 +323,32 @@ class ToyotaPlugin:
             except ValueError:
                 self._last_fuel = 0
 
-    def onStop(self):
+    def onStop(self):		# pylint:disable=invalid-name
         """Callback from Domoticz that the plugin is stopped."""
-        self._client = None
-        if self._loop:
-            self._loop.close()
+        self.disconnect()
 
-    def onHeartbeat(self):
-        """Callback from Domoticz that the plugin can perform some work."""
-        self._heartbeat_count += 1
-        if self._heartbeat_count > 10:
-            self._heartbeat_count = 0
-            self._update_sensors()
+_plugin = ToyotaPlugin()	# pylint:disable=invalid-name
 
-_plugin = ToyotaPlugin()
-
-def onStart():
+def onStart():			# pylint:disable=invalid-name
     """Callback from Domoticz that the plugin is started."""
     if sys.version_info < MINIMUM_PYTHON_VERSION:
-        Domoticz.Error(f'Python version {sys.version_info} is not supported, at least {MINIMUM_PYTHON_VERSION} is required.')
+        Domoticz.Error(f'Python version {sys.version_info} is not supported,'
+                       f' at least {MINIMUM_PYTHON_VERSION} is required.')
     else:
         if _importErrors:
             Domoticz.Error(_importErrors)
         else:
             _plugin.onStart()
 
-def onStop():
+def onStop():			# pylint:disable=invalid-name
     """Callback from Domoticz that the plugin is stopped."""
     _plugin.onStop()
 
-def onHeartbeat():
+def onHeartbeat():		# pylint:disable=invalid-name
     """Callback from Domoticz that the plugin can perform some work."""
     _plugin.onHeartbeat()
 
-def DumpConfigToLog():
+def dump_config_to_log():
     """Dump the configuration of the plugin to the Domoticz debug log."""
     for key in Parameters:
         if Parameters[key] != '':
