@@ -28,8 +28,8 @@
         </p>
         <h3>Features</h3>
         <ul style="list-style-type:square">
-            <li>Retrieve actual mileage</li>
-            <li>Retrieve actual fuel level percentage</li>
+            <li>Retrieve mileage, fuel level and locked/unlocked state of the car</li>
+            <li>Calculate the distance from the parked car and the home location</li>
         </ul>
         <h3>Devices</h3>
         <ul style="list-style-type:square">
