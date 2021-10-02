@@ -2,7 +2,7 @@
 A Domoticz plugin that provides sensors for a Toyota car with connected services.
 
 It is using the same API that is used by the Toyota MyT connected services. This API is however only useable
-for cars that are purchased in Europe. For more information on Toyota MyT see: 
+for cars that are purchased in Europe. For more information on Toyota MyT see:
 https://www.toyota-europe.com/service-and-accessories/my-toyota/myt</a>
 
 The Toyota car should first be made available in the MyT connected services, after which this plugin
@@ -31,5 +31,3 @@ The following icons from the [Noun Project](https://thenounproject.com) are used
 * [fuel meter](https://thenounproject.com/search/?q=fuel+meter&i=2690780#) by Phonlaphat Thongsriphong from the Noun Project
 * [unlocked](https://thenounproject.com/andrejs/collection/view-thin/?i=3863254) by Andrejs Kirma from the Noun Project
 * [locked](https://thenounproject.com/search/?q=car+locked&i=3863407#) by Andrejs Kirma from the Noun Project
-
-

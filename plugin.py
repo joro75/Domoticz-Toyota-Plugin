@@ -63,10 +63,10 @@ from abc import ABC, abstractmethod
 import asyncio
 from typing import Any, Union, List, Tuple, Optional
 
-_importErrors = ''		# pylint:disable=invalid-name
+_importErrors = ''  # pylint:disable=invalid-name
 
 try:
-    import Domoticz		# type: ignore
+    import Domoticz  # type: ignore
 except ImportError:
     _importErrors += ('The Python Domoticz library is not installed. '
                       'This plugin can only be used in Domoticz. '
@@ -79,16 +79,16 @@ except ImportError:
     pass
 
 try:
-    import mytoyota		# type: ignore
-    from mytoyota.client import MyT		# type: ignore
-    import mytoyota.exceptions	# type: ignore
-    import mytoyota.vehicle	# type: ignore
+    import mytoyota  # type: ignore
+    from mytoyota.client import MyT  # type: ignore
+    import mytoyota.exceptions  # type: ignore
+    import mytoyota.vehicle  # type: ignore
 except ImportError:
     _importErrors += ('The Python mytoyota library is not installed. '
                       'Use pip to install mytoyota: pip3 install -r requirements.txt')
 
 try:
-    import geopy.distance	# type: ignore
+    import geopy.distance  # type: ignore
 except ImportError:
     _importErrors += ('The python geopy library is not installed. '
                       'Use pip to install geopy: pip3 install -r requirements.txt')
@@ -113,7 +113,7 @@ class ReducedHeartBeat(ABC):
         super().__init__()
         self._heartbeat_count = self._heartbeat_interval
 
-    def onHeartbeat(self) -> None:	# pylint:disable=invalid-name
+    def onHeartbeat(self) -> None:  # pylint:disable=invalid-name
         """Callback from Domoticz that the plugin can perform some work."""
         self._heartbeat_count += 1
         if self._heartbeat_count > self._heartbeat_interval:
@@ -214,7 +214,7 @@ class ToyotaMyTConnector():
             self._loop.close()
 
 
-class DomoticzSensor(ABC):		# pylint:disable=too-few-public-methods
+class DomoticzSensor(ABC):  # pylint:disable=too-few-public-methods
     """Representation of a generic updateable Domoticz sensor."""
 
     def __init__(self, unit_index: int) -> None:
@@ -323,8 +323,8 @@ class DistanceToyotaSensor(ToyotaDomoticzSensor):
         self._coordinates_home: Optional[Tuple[float, ...]] = None
         if Settings['Location']:
             try:
-                self._coordinates_home = tuple([float(part) for part in
-                                                Settings['Location'].split(';')])
+                self._coordinates_home = tuple(float(part) for part in
+                                               Settings['Location'].split(';'))
             except ValueError:
                 pass
 
@@ -412,9 +412,9 @@ class ToyotaPlugin(ReducedHeartBeat, ToyotaMyTConnector):
                 sensor.create(vehicle_status)
 
 
-_plugin = ToyotaPlugin()	# pylint:disable=invalid-name
+_plugin = ToyotaPlugin()  # pylint:disable=invalid-name
 
-def onStart() -> None:			# pylint:disable=invalid-name
+def onStart() -> None:  # pylint:disable=invalid-name
     """Callback from Domoticz that the plugin is started."""
     if DO_DOMOTICZ_DEBUGGING:
         Domoticz.Debugging(1)
@@ -429,11 +429,11 @@ def onStart() -> None:			# pylint:disable=invalid-name
             _plugin.add_sensors()
             _plugin.create_sensors()
 
-def onStop() -> None:			# pylint:disable=invalid-name
+def onStop() -> None:  # pylint:disable=invalid-name
     """Callback from Domoticz that the plugin is stopped."""
     _plugin.disconnect()
 
-def onHeartbeat() -> None:		# pylint:disable=invalid-name
+def onHeartbeat() -> None:  # pylint:disable=invalid-name
     """Callback from Domoticz that the plugin can perform some work."""
     _plugin.onHeartbeat()
 
