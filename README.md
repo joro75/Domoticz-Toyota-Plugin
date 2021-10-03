@@ -1,4 +1,4 @@
-# Domoticz-Toyota-Plugin 0.1.0
+# Domoticz-Toyota-Plugin 0.8.0
 A Domoticz plugin that provides sensors for a Toyota car with connected services.
 
 It is using the same API that is used by the Toyota MyT connected services. This API is however only useable
