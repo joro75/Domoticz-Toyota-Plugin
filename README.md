@@ -15,10 +15,10 @@ devices in Domoticz.
 ## Provided devices
 | Device           | Image                                                                                                                                                 | Description                                  |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| Mileage          | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_mileage.png' width='353' alt='Mileage device'>                   | Show actual mileage                          |
-| Fuel level       | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_fuel_level.png' width='353' alt='Fuel level device'>             | Show actual fuel level percentage            |
+| Mileage          | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_mileage.png' width='353' alt='Mileage device'>                   | Shows the daily and total mileage            |
+| Fuel level       | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_fuel_level.png' width='353' alt='Fuel level device'>             | Shows the actual fuel level percentage       |
 | Distance to home | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_distance_to_home.png' width='353' alt='Distance to home device'> | Shows the distance between the car and home  |
-| Locked           | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_locked_locked.png' width='353' alt='Locked device'>              | Shows the locked / unlocked state of the car |
+| Locked           | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_locked_locked.png' width='353' alt='Locked device'>              | Shows if the car is locked or unlocked       |
 
 ## Installation and Setup
 - a running Domoticz installation, tested with version 2021.1 and Python 3.7
@@ -37,14 +37,14 @@ devices in Domoticz.
 - or just download, unzip and copy to `domoticz/plugins`
 - no need on Raspbian for sys path adaption if using sudo for pip3
 - restart Domoticz service
-- Now go to **Setup**, **Hardware** in your Domoticz interface. There add **Toyota Plugin**.
+- Now go to **Setup**, **Hardware** in your Domoticz interface. There add **Toyota** plugin.
 
 ### Settings
 | Parameter   | Information                                                                                                                                                                                  |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | username    | The username that is also used to login in the MyT application                                                                                                                               |
 | password    | The password that is also used to login in the MyT application.                                                                                                                              |
-| locale      | The locale that should be used. This can be for example 'en-gb' or another locale. 'en-us' doesn't seem to work!                                                                             |
+| locale      | The locale that should be used. This can be for example 'en-gb' (the default) or another locale. 'en-us' doesn't seem to work!                                                               |
 | car         | An identifier for the car for which the data should be retrieved, if multiple cars are present in the myT application. It can be a part of the VIN number, alias, licenseplate or the model. |
 
 ## Credits
@@ -57,8 +57,8 @@ The following icons from the [Noun Project](https://thenounproject.com) are used
 
 ## State and development
 The current version is working for my situation. It however is not tested yet by other users, but it should
-be working. The number of provided devicess is not complete yet, and future updates will add additional devices.
+be working. The number of provided devices is not complete yet, and future updates will add additional devices.
 
 This plugin is using pre-commit. If you would like to contribute an improvement, fork this repository and
-create a new branch. Before making a PR, please run `pre-commit run --all-files` and make sure that all
-tests passes locally first.
+create a new branch, which includes the improvements. Before making a PR, please run `pre-commit run --all-files`
+and make sure that all tests are passing before requesting the PR.
