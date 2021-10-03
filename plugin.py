@@ -307,9 +307,9 @@ class FuelToyotaSensor(ToyotaDomoticzSensor):
 
     def update(self, vehicle_status) -> None:
         """Determine the actual value of the instrument and update the sensor in Domoticz."""
-        if vehicle_status and vehicle_status.odometer:
+        if vehicle_status and vehicle_status.energy:
             if self.exists():
-                fuel = vehicle_status.odometer.fuel
+                fuel = vehicle_status.energy.level
                 if fuel != self._last_fuel:
                     Devices[self._unit_index].Update(nValue=int(float(fuel)), sValue=str(fuel))
                     self._last_fuel = fuel
@@ -372,10 +372,10 @@ class LockedToyotaSensor(ToyotaDomoticzSensor):
 
     def update(self, vehicle_status) -> None:
         """Determine the actual value of the instrument and update the sensor in Domoticz."""
-        if vehicle_status and vehicle_status.status.doors:
+        if vehicle_status and vehicle_status.sensors.doors:
             if self.exists():
                 locked = True
-                for door in vehicle_status.status.doors.as_dict():
+                for door in vehicle_status.sensors.doors.as_dict():
                     try:
                         locked = locked and door.get('locked', True)
                     except AttributeError:
