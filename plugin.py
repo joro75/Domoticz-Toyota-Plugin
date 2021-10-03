@@ -28,10 +28,10 @@
         </p>
         <h3>Devices</h3>
         <ul style="list-style-type:square">
-            <li>Mileage - The actual mileage of the car</li>
-            <li>Fuel level - The actual fuel level of the car</li>
-            <li>Distance to home - The actual distance between the car and home</li>
-            <li>Locked - The actual status if the car is locked or unlocked</li>
+            <li>Mileage - Shows the daily and total mileage of the car</li>
+            <li>Fuel level - Shows the actual fuel level percentage</li>
+            <li>Distance to home - Shows the distance between the car and home</li>
+            <li>Locked - Shows if the car is locked or unlocked</li>
         </ul>
         <h3>Configuration</h3>
         <ul style="list-style-type:square">
