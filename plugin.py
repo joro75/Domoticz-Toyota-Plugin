@@ -7,12 +7,12 @@
 #
 # CodingGuidelines 2020-04-11
 """
-<plugin key="Toyota" name="Toyota" author="joro75" version="0.1.0"
+<plugin key="Toyota" name="Toyota" author="joro75" version="0.8.0"
         externallink="https://github.com/joro75/Domoticz-Toyota-Plugin">
     <description>
-        <h2>Domoticz Toyota Plugin 0.1.0</h2>
+        <h2>Domoticz Toyota Plugin 0.8.0</h2>
         <p>
-        A Domoticz plugin that provides sensors for a Toyota car with connected services.
+        A Domoticz plugin that provides devices for a Toyota car with connected services.
         </p>
         <p>
         It is using the same API that is used by the Toyota MyT connected services.
@@ -24,19 +24,14 @@
         <p>
         The Toyota car should first be made available in the MyT connected services,
         after which this plugin can retrieve the information, which is then provided as
-        several sensors in Domoticz.
+        several devices in Domoticz.
         </p>
-        <h3>Features</h3>
-        <ul style="list-style-type:square">
-            <li>Retrieve mileage, fuel level and locked/unlocked state of the car</li>
-            <li>Calculate the distance from the parked car and the home location</li>
-        </ul>
         <h3>Devices</h3>
         <ul style="list-style-type:square">
-            <li>Mileage - The actual mileage of the car</li>
-            <li>Fuel level - The actual fuel level of the car</li>
-            <li>Distance to home - The actual distance between the car and home</li>
-            <li>Locked - The actual status if the car is locked or unlocked</li>
+            <li>Mileage - Shows the daily and total mileage of the car</li>
+            <li>Fuel level - Shows the actual fuel level percentage</li>
+            <li>Distance to home - Shows the distance between the car and home</li>
+            <li>Locked - Shows if the car is locked or unlocked</li>
         </ul>
         <h3>Configuration</h3>
         <ul style="list-style-type:square">
@@ -105,7 +100,7 @@ UNIT_DISTANCE_INDEX: int = 3
 UNIT_CAR_LOCKED_INDEX: int = 4
 
 class ReducedHeartBeat(ABC):
-    """Helper class that only calls the update of the sensors every ... heartbeat."""
+    """Helper class that only calls the update of the devices every ... heartbeat."""
 
     _heartbeat_interval: int = 10
 
@@ -118,11 +113,11 @@ class ReducedHeartBeat(ABC):
         self._heartbeat_count += 1
         if self._heartbeat_count > self._heartbeat_interval:
             self._heartbeat_count = 0
-            self.update_sensors()
+            self.update_devices()
 
     @abstractmethod
-    def update_sensors(self) -> None:
-        """Retrieve the status of the device and update the Domoticz sensors."""
+    def update_devices(self) -> None:
+        """Retrieve the status of the device and update the Domoticz devices."""
         return
 
 class ToyotaMyTConnector():
@@ -214,44 +209,44 @@ class ToyotaMyTConnector():
             self._loop.close()
 
 
-class DomoticzSensor(ABC):  # pylint:disable=too-few-public-methods
-    """Representation of a generic updateable Domoticz sensor."""
+class DomoticzDevice(ABC):  # pylint:disable=too-few-public-methods
+    """Representation of a generic updateable Domoticz devices."""
 
     def __init__(self, unit_index: int) -> None:
         super().__init__()
         self._unit_index = unit_index
 
     def exists(self) -> bool:
-        """Check if the Domoticz sensor is present and existing."""
+        """Check if the Domoticz device is present and existing."""
         return (self._unit_index in Devices) and (Devices[self._unit_index])
 
 
-class ToyotaDomoticzSensor(DomoticzSensor):
+class ToyotaDomoticzDevice(DomoticzDevice):
     """
-    A generic updateable Domoticz sensor, to represent information from
+    A generic updateable Domoticz device, to represent information from
     a Toyota MyT connected services car.
     """
 
     @abstractmethod
     def create(self, vehicle_status) -> None:
-        """Check if the sensor is present in Domoticz, and otherwise create it."""
+        """Check if the device is present in Domoticz, and otherwise create it."""
         return
 
     @abstractmethod
     def update(self, vehicle_status) -> None:
-        """Determine the actual value of the instrument and update the sensor in Domoticz."""
+        """Determine the actual value of the instrument and update the device in Domoticz."""
         return
 
 
-class MileageToyotaSensor(ToyotaDomoticzSensor):
-    """The Domoticz sensor that shows the mileage."""
+class MileageToyotaDevice(ToyotaDomoticzDevice):
+    """The Domoticz device that shows the mileage."""
 
     def __init__(self) -> None:
         super().__init__(UNIT_MILEAGE_INDEX)
         self._last_mileage: int = 0
 
     def create(self, vehicle_status) -> None:
-        """Check if the sensor is present in Domoticz, and otherwise create it."""
+        """Check if the device is present in Domoticz, and otherwise create it."""
         if vehicle_status:
             if not self.exists():
                 Domoticz.Device(Name='Mileage', Unit=self._unit_index,
@@ -270,7 +265,7 @@ class MileageToyotaSensor(ToyotaDomoticzSensor):
                 self._last_mileage = 0
 
     def update(self, vehicle_status) -> None:
-        """Determine the actual value of the instrument and update the sensor in Domoticz."""
+        """Determine the actual value of the instrument and update the device in Domoticz."""
         if vehicle_status and vehicle_status.odometer:
             if self.exists():
                 mileage = vehicle_status.odometer.mileage
@@ -280,15 +275,15 @@ class MileageToyotaSensor(ToyotaDomoticzSensor):
                     self._last_mileage = mileage
 
 
-class FuelToyotaSensor(ToyotaDomoticzSensor):
-    """The Domoticz sensor that shows the fuel level percentage."""
+class FuelToyotaDevice(ToyotaDomoticzDevice):
+    """The Domoticz device that shows the fuel level percentage."""
 
     def __init__(self) -> None:
         super().__init__(UNIT_FUEL_INDEX)
         self._last_fuel: float = 0.0
 
     def create(self, vehicle_status) -> None:
-        """Check if the sensor is present in Domoticz, and otherwise create it."""
+        """Check if the device is present in Domoticz, and otherwise create it."""
         if vehicle_status:
             if not self.exists():
                 Domoticz.Image('ToyotaFuelMeter.zip').Create()
@@ -306,7 +301,7 @@ class FuelToyotaSensor(ToyotaDomoticzSensor):
                 self._last_fuel = 0
 
     def update(self, vehicle_status) -> None:
-        """Determine the actual value of the instrument and update the sensor in Domoticz."""
+        """Determine the actual value of the instrument and update the device in Domoticz."""
         if vehicle_status and vehicle_status.energy:
             if self.exists():
                 fuel = vehicle_status.energy.level
@@ -315,8 +310,8 @@ class FuelToyotaSensor(ToyotaDomoticzSensor):
                     self._last_fuel = fuel
 
 
-class DistanceToyotaSensor(ToyotaDomoticzSensor):
-    """The Domoticz sensor that shows the distance between the parked car and home."""
+class DistanceToyotaDevice(ToyotaDomoticzDevice):
+    """The Domoticz device that shows the distance between the parked car and home."""
 
     def __init__(self) -> None:
         super().__init__(UNIT_DISTANCE_INDEX)
@@ -329,7 +324,7 @@ class DistanceToyotaSensor(ToyotaDomoticzSensor):
                 pass
 
     def create(self, vehicle_status) -> None:
-        """Check if the sensor is present in Domoticz, and otherwise create it."""
+        """Check if the device is present in Domoticz, and otherwise create it."""
         if vehicle_status:
             if not self.exists():
                 Domoticz.Device(Name='Distance to home', Unit=self._unit_index,
@@ -340,7 +335,7 @@ class DistanceToyotaSensor(ToyotaDomoticzSensor):
                                 ).Create()
 
     def update(self, vehicle_status) -> None:
-        """Determine the actual value of the instrument and update the sensor in Domoticz."""
+        """Determine the actual value of the instrument and update the device in Domoticz."""
         if vehicle_status and vehicle_status.parking:
             if self.exists():
                 if not self._coordinates_home is None:
@@ -352,14 +347,14 @@ class DistanceToyotaSensor(ToyotaDomoticzSensor):
                     Devices[self._unit_index].Update(nValue=0, sValue=f'{dist}')
 
 
-class LockedToyotaSensor(ToyotaDomoticzSensor):
-    """The Domoticz sensor that shows the locked/unlocked status of the car."""
+class LockedToyotaDevice(ToyotaDomoticzDevice):
+    """The Domoticz device that shows the locked/unlocked status of the car."""
 
     def __init__(self) -> None:
         super().__init__(UNIT_CAR_LOCKED_INDEX)
 
     def create(self, vehicle_status) -> None:
-        """Check if the sensor is present in Domoticz, and otherwise create it."""
+        """Check if the device is present in Domoticz, and otherwise create it."""
         if vehicle_status:
             if not self.exists():
                 Domoticz.Image('ToyotaLocked.zip').Create()
@@ -371,7 +366,7 @@ class LockedToyotaSensor(ToyotaDomoticzSensor):
                                 ).Create()
 
     def update(self, vehicle_status) -> None:
-        """Determine the actual value of the instrument and update the sensor in Domoticz."""
+        """Determine the actual value of the instrument and update the device in Domoticz."""
         if vehicle_status and vehicle_status.sensors.doors:
             if self.exists():
                 locked = True
@@ -388,28 +383,28 @@ class ToyotaPlugin(ReducedHeartBeat, ToyotaMyTConnector):
 
     def __init__(self) -> None:
         super().__init__()
-        self._sensors: List[ToyotaDomoticzSensor] = []
+        self._devices: List[ToyotaDomoticzDevice] = []
 
-    def add_sensors(self) -> None:
-        """Add all the sensor classes that are part of this plugin."""
-        self._sensors += [MileageToyotaSensor()]
-        self._sensors += [FuelToyotaSensor()]
-        self._sensors += [DistanceToyotaSensor()]
-        self._sensors += [LockedToyotaSensor()]
+    def add_devices(self) -> None:
+        """Add all the device classes that are part of this plugin."""
+        self._devices += [MileageToyotaDevice()]
+        self._devices += [FuelToyotaDevice()]
+        self._devices += [DistanceToyotaDevice()]
+        self._devices += [LockedToyotaDevice()]
 
-    def update_sensors(self) -> None:
-        """Retrieve the status of the vehicle and update the Domoticz sensors."""
+    def update_devices(self) -> None:
+        """Retrieve the status of the vehicle and update the Domoticz devices."""
         vehicle_status = self.retrieve_vehicle_status()
         if vehicle_status:
-            for sensor in self._sensors:
-                sensor.update(vehicle_status)
+            for device in self._devices:
+                device.update(vehicle_status)
 
-    def create_sensors(self) -> None:
-        """Create the appropiate sensors in Domoticz for the vehicle."""
+    def create_devices(self) -> None:
+        """Create the appropiate devices in Domoticz for the vehicle."""
         vehicle_status = self.retrieve_vehicle_status()
         if vehicle_status:
-            for sensor in self._sensors:
-                sensor.create(vehicle_status)
+            for device in self._devices:
+                device.create(vehicle_status)
 
 
 _plugin = ToyotaPlugin()  # pylint:disable=invalid-name
@@ -426,8 +421,8 @@ def onStart() -> None:  # pylint:disable=invalid-name
         if _importErrors:
             Domoticz.Error(_importErrors)
         else:
-            _plugin.add_sensors()
-            _plugin.create_sensors()
+            _plugin.add_devices()
+            _plugin.create_devices()
 
 def onStop() -> None:  # pylint:disable=invalid-name
     """Callback from Domoticz that the plugin is stopped."""
