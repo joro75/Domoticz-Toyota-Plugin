@@ -13,12 +13,13 @@ app, after which this plugin can retrieve the information, which is then provide
 devices in Domoticz.
 
 ## Provided devices
-| Device           | Image                                                                                                                                                 | Description                                  |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| Mileage          | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_mileage.png' width='353' alt='Mileage device'>                   | Shows the daily and total mileage            |
-| Fuel level       | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_fuel_level.png' width='353' alt='Fuel level device'>             | Shows the actual fuel level percentage       |
-| Distance to home | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_distance_to_home.png' width='353' alt='Distance to home device'> | Shows the distance between the car and home  |
-| Locked           | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_locked_locked.png' width='353' alt='Locked device'>              | Shows if the car is locked or unlocked       |
+| Device           | Image                                                                                                                                                 | Description                                          |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Mileage          | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_mileage.png' width='353' alt='Mileage device'>                   | Shows the daily and total mileage                    |
+| Fuel level       | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_fuel_level.png' width='353' alt='Fuel level device'>             | Shows the actual fuel level percentage               |
+| Distance to home | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_distance_to_home.png' width='353' alt='Distance to home device'> | Shows the distance between the car and home          |
+| Locked           | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_locked_locked.png' width='353' alt='Locked device'>              | Shows if the car is locked or unlocked               |
+| Parking location | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_parking_location.png' width='353' alt='Parking location device'> | Shows the address of the parking location of the car |
 
 ## Installation and Setup
 - a running Domoticz installation, tested with version 2021.1 and Python 3.7

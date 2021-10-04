@@ -32,6 +32,7 @@
             <li>Fuel level - Shows the actual fuel level percentage</li>
             <li>Distance to home - Shows the distance between the car and home</li>
             <li>Locked - Shows if the car is locked or unlocked</li>
+            <li>Parking location - Shows the address of the parking location of the car</li>
         </ul>
         <h3>Configuration</h3>
         <ul style="list-style-type:square">
@@ -372,8 +373,8 @@ class ParkingLocationToyotaDevice(ToyotaDomoticzDevice):
         """Determine the actual value of the instrument and update the device in Domoticz."""
         if vehicle_status and vehicle_status.parking:
             if self.exists():
-                coords_car = (vehicle_status.parking.latitude,
-                              vehicle_status.parking.longitude)
+                coords_car = (str(vehicle_status.parking.latitude),
+                              str(vehicle_status.parking.longitude))
                 if coords_car != self._last_coords:
                     address = self._lookup_address(coords_car)
                     Devices[self._unit_index].Update(nValue=0, sValue=f'{address}')
@@ -389,7 +390,7 @@ class ParkingLocationToyotaDevice(ToyotaDomoticzDevice):
                 # To reduce the calls on the Nominatim API we will
                 # cache already determined addresses
                 self._address_cache[coord_str] = location.address
-        return self._address_cache[coord_str]
+        return self._address_cache.get(coord_str, '')
 
 class LockedToyotaDevice(ToyotaDomoticzDevice):
     """The Domoticz device that shows the locked/unlocked status of the car."""
