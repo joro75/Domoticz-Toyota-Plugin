@@ -56,7 +56,7 @@
 import sys
 from abc import ABC, abstractmethod
 import asyncio
-from typing import Any, Union, List, Tuple, Optional
+from typing import Any, Union, List, Dict, Tuple, Optional
 
 _importErrors = ''  # pylint:disable=invalid-name
 
@@ -84,6 +84,7 @@ except ImportError:
 
 try:
     import geopy.distance  # type: ignore
+    from geopy.geocoders import Nominatim
 except ImportError:
     _importErrors += ('The python geopy library is not installed. '
                       'Use pip to install geopy: pip3 install -r requirements.txt')
@@ -91,13 +92,13 @@ except ImportError:
 MINIMUM_PYTHON_VERSION = (3, 6)
 DO_DOMOTICZ_DEBUGGING: bool = False
 
+NOMINATIM_USER_AGENT = 'Domoticz-Toyota-Plugin'
+
 UNIT_MILEAGE_INDEX: int = 1
-
 UNIT_FUEL_INDEX: int = 2
-
 UNIT_DISTANCE_INDEX: int = 3
-
 UNIT_CAR_LOCKED_INDEX: int = 4
+UNIT_PARKING_LOCATION_INDEX: int = 5
 
 class ReducedHeartBeat(ABC):
     """Helper class that only calls the update of the devices every ... heartbeat."""
@@ -315,6 +316,7 @@ class DistanceToyotaDevice(ToyotaDomoticzDevice):
 
     def __init__(self) -> None:
         super().__init__(UNIT_DISTANCE_INDEX)
+        self._last_coords: Tuple[float, ...] = (0.0, 0.0)
         self._coordinates_home: Optional[Tuple[float, ...]] = None
         if Settings['Location']:
             try:
@@ -325,7 +327,7 @@ class DistanceToyotaDevice(ToyotaDomoticzDevice):
 
     def create(self, vehicle_status) -> None:
         """Check if the device is present in Domoticz, and otherwise create it."""
-        if vehicle_status:
+        if vehicle_status.parking:
             if not self.exists():
                 Domoticz.Device(Name='Distance to home', Unit=self._unit_index,
                                 TypeName='Custom Sensor', Type=243, Subtype=31,
@@ -341,11 +343,53 @@ class DistanceToyotaDevice(ToyotaDomoticzDevice):
                 if not self._coordinates_home is None:
                     coords_car = (float(vehicle_status.parking.latitude),
                                   float(vehicle_status.parking.longitude))
-                    dist = geopy.distance.distance(self._coordinates_home, coords_car).km
-                    # Round it to meters.
-                    dist = round(dist, 3)
-                    Devices[self._unit_index].Update(nValue=0, sValue=f'{dist}')
+                    if coords_car != self._last_coords:
+                        dist = geopy.distance.distance(self._coordinates_home, coords_car).km
+                        # Round it to meters.
+                        dist = round(dist, 3)
+                        Devices[self._unit_index].Update(nValue=0, sValue=f'{dist}')
+                        self._last_coords = coords_car
 
+class ParkingLocationToyotaDevice(ToyotaDomoticzDevice):
+    """The Domoticz device that shows the address of the parking location of the car."""
+
+    def __init__(self) -> None:
+        super().__init__(UNIT_PARKING_LOCATION_INDEX)
+        self._address_cache: Dict[str, str] = {}
+        self._last_coords: Tuple[str, ...] = ('', '')
+
+    def create(self, vehicle_status) -> None:
+        """Check if the device is present in Domoticz, and otherwise create it."""
+        if vehicle_status.parking:
+            if not self.exists():
+                Domoticz.Device(Name='Parking location', Unit=self._unit_index,
+                                TypeName='Text', Type=243, Subtype=19,
+                                Used=1,
+                                Description='The address of the parking location of the car'
+                                ).Create()
+
+    def update(self, vehicle_status) -> None:
+        """Determine the actual value of the instrument and update the device in Domoticz."""
+        if vehicle_status and vehicle_status.parking:
+            if self.exists():
+                coords_car = (vehicle_status.parking.latitude,
+                              vehicle_status.parking.longitude)
+                if coords_car != self._last_coords:
+                    address = self._lookup_address(coords_car)
+                    Devices[self._unit_index].Update(nValue=0, sValue=f'{address}')
+                    self._last_coords = coords_car
+
+    def _lookup_address(self, coords: Tuple[str, ...]) -> str:
+        """Determines the address of the given coordinates"""
+        coord_str = ','.join(coordinate.strip().lower() for coordinate in coords[0:2])
+        if coord_str not in self._address_cache:
+            geolocator = Nominatim(user_agent=NOMINATIM_USER_AGENT)
+            location = geolocator.reverse(coord_str)
+            if location and location.address:
+                # To reduce the calls on the Nominatim API we will
+                # cache already determined addresses
+                self._address_cache[coord_str] = location.address
+        return self._address_cache[coord_str]
 
 class LockedToyotaDevice(ToyotaDomoticzDevice):
     """The Domoticz device that shows the locked/unlocked status of the car."""
@@ -391,6 +435,7 @@ class ToyotaPlugin(ReducedHeartBeat, ToyotaMyTConnector):
         self._devices += [FuelToyotaDevice()]
         self._devices += [DistanceToyotaDevice()]
         self._devices += [LockedToyotaDevice()]
+        self._devices += [ParkingLocationToyotaDevice()]
 
     def update_devices(self) -> None:
         """Retrieve the status of the vehicle and update the Domoticz devices."""
