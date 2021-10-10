@@ -85,7 +85,7 @@ except ImportError:
 
 try:
     import geopy.distance  # type: ignore
-    from geopy.geocoders import Nominatim
+    from geopy.geocoders import Nominatim  # type: ignore
 except ImportError:
     _importErrors += ('The python geopy library is not installed. '
                       'Use pip to install geopy: pip3 install -r requirements.txt')
@@ -358,6 +358,8 @@ class ParkingLocationToyotaDevice(ToyotaDomoticzDevice):
         super().__init__(UNIT_PARKING_LOCATION_INDEX)
         self._address_cache: Dict[str, str] = {}
         self._last_coords: Tuple[str, ...] = ('', '')
+        self._lookup_address_requests: int = 0
+        self._lookup_address_cache_hits: int = 0
 
     def create(self, vehicle_status) -> None:
         """Check if the device is present in Domoticz, and otherwise create it."""
@@ -382,6 +384,7 @@ class ParkingLocationToyotaDevice(ToyotaDomoticzDevice):
 
     def _lookup_address(self, coords: Tuple[str, ...]) -> str:
         """Determines the address of the given coordinates"""
+        self._lookup_address_requests += 1
         coord_str = ','.join(coordinate.strip().lower() for coordinate in coords[0:2])
         if coord_str not in self._address_cache:
             geolocator = Nominatim(user_agent=NOMINATIM_USER_AGENT)
@@ -390,6 +393,10 @@ class ParkingLocationToyotaDevice(ToyotaDomoticzDevice):
                 # To reduce the calls on the Nominatim API we will
                 # cache already determined addresses
                 self._address_cache[coord_str] = location.address
+        else:
+            self._lookup_address_cache_hits += 1
+        Domoticz.Log(f'Lookup address cache statistics: {self._lookup_address_cache_hits}'
+                     f'/{self._lookup_address_requests}')
         return self._address_cache.get(coord_str, '')
 
 class LockedToyotaDevice(ToyotaDomoticzDevice):
