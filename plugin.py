@@ -90,7 +90,7 @@ except ImportError:
     _importErrors += ('The python geopy library is not installed. '
                       'Use pip to install geopy: pip3 install -r requirements.txt')
 
-MINIMUM_PYTHON_VERSION = (3, 6)
+MINIMUM_PYTHON_VERSION = (3, 7)
 DO_DOMOTICZ_DEBUGGING: bool = False
 
 NOMINATIM_USER_AGENT = 'Domoticz-Toyota-Plugin'
