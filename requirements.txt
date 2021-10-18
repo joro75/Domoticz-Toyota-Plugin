@@ -1,2 +1,2 @@
 geopy==2.2.0
-mytoyota==0.7.1
+mytoyota==0.7.2
