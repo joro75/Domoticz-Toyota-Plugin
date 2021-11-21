@@ -25,7 +25,7 @@ devices in Domoticz.
 - a running Domoticz installation, tested with version 2021.1 and Python 3.7
 - Python >= 3.7
 - install needed python modules:
-   - [mytoyota](https://github.com/DurgNomis-drol/mytoyota) Version 0.7.1
+   - [mytoyota](https://github.com/DurgNomis-drol/mytoyota) Version 0.7.5
    - [geopy](https://github.com/geopy/geopy) Version 2.2.0
    - you can use `sudo pip3 install -r requirements.txt`
 - clone project
