@@ -7,10 +7,10 @@
 #
 # CodingGuidelines 2020-04-11
 """
-<plugin key="Toyota" name="Toyota" author="joro75" version="0.8.0"
+<plugin key="Toyota" name="Toyota" author="joro75" version="0.8.1"
         externallink="https://github.com/joro75/Domoticz-Toyota-Plugin">
     <description>
-        <h2>Domoticz Toyota Plugin 0.8.0</h2>
+        <h2>Domoticz Toyota Plugin 0.8.1</h2>
         <p>
         A Domoticz plugin that provides devices for a Toyota car with connected services.
         </p>
@@ -38,8 +38,6 @@
         <ul style="list-style-type:square">
             <li>Username - The username that is also used to login in the myT application.</li>
             <li>Password - The password that is also used to login in the myT application.</li>
-            <li>Locale - The locale that should be used. This can be for example 'en-gb'
-                or another locale. 'en-us' doesn't seem to work!</li>
             <li>Car - An identifier for the car for which the data should be retrieved,
                 if multiple cars are present in the myT application.
                 It can be a part of the VIN number, alias, licenseplate or the model.</li>
@@ -48,7 +46,7 @@
     <params>
         <param field="Username" label="Username" width="200px" required="true"/>
         <param field="Password" label="Password" width="200px" required="true" password="true"/>
-        <param field="Mode1" label="Locale" width="200px" required="false" default="en-gb"/>
+        <!-- Mode1 has been used in the past for the Locale. Not reusing it yet. -->
         <param field="Mode2" label="Car" width="200px" required="false" />
     </params>
 </plugin>
@@ -154,7 +152,7 @@ class ToyotaMyTConnector():
         try:
             self._client = MyT(username=Parameters['Username'],
                                password=Parameters['Password'],
-                               locale=Parameters['Mode1'],
+                               locale='nl-nl',
                                region='europe')
             self._loop.run_until_complete(self._client.login())
             cars = self._loop.run_until_complete(self._client.get_vehicles())

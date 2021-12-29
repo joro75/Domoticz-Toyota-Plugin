@@ -1,5 +1,5 @@
-# Domoticz-Toyota-Plugin 0.8.0
-[![PyPI pyversions](https://img.shields.io/badge/python-3.7-blue.svg)]() [![Plugin version](https://img.shields.io/badge/version-0.8.0-red.svg)](https://github.com/joro75/Domoticz-Toyota-Plugin/branches)
+# Domoticz-Toyota-Plugin 0.8.1
+[![PyPI pyversions](https://img.shields.io/badge/python-3.7-blue.svg)]() [![Plugin version](https://img.shields.io/badge/version-0.8.1-red.svg)](https://github.com/joro75/Domoticz-Toyota-Plugin/branches)
 
 A Domoticz plugin that provides devices for a Toyota car with connected services.
 
@@ -45,7 +45,6 @@ devices in Domoticz.
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | username    | The username that is also used to login in the MyT application                                                                                                                               |
 | password    | The password that is also used to login in the MyT application.                                                                                                                              |
-| locale      | The locale that should be used. This can be for example 'en-gb' (the default) or another locale. 'en-us' doesn't seem to work!                                                               |
 | car         | An identifier for the car for which the data should be retrieved, if multiple cars are present in the myT application. It can be a part of the VIN number, alias, licenseplate or the model. |
 
 ## Credits
