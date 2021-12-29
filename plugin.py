@@ -270,7 +270,8 @@ class MileageToyotaDevice(ToyotaDomoticzDevice):
             if self.exists():
                 mileage = vehicle_status.odometer.mileage
                 diff = mileage - self._last_mileage
-                if diff != 0:
+                if diff > 0:
+                    # Mileage can only go up
                     Devices[self._unit_index].Update(nValue=0, sValue=f'{diff}')
                     self._last_mileage = mileage
 
