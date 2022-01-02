@@ -6,6 +6,7 @@
 # Domoticz-Toyota-Plugin   ( https://github.com/joro75/Domoticz-Toyota-Plugin )
 #
 # CodingGuidelines 2020-04-11
+# pylint:disable=line-too-long
 """
 <plugin key="Toyota" name="Toyota" author="joro75" version="0.8.1"
         externallink="https://github.com/joro75/Domoticz-Toyota-Plugin">
@@ -17,9 +18,18 @@
         <p>
         It is using the same API that is used by the Toyota MyT connected services.
         This API is however only useable for cars that are purchased in Europe.
-        For more information of Toyota MyT see:
-        <a href="https://www.toyota-europe.com/service-and-accessories/my-toyota/myt">
-        https://www.toyota-europe.com/service-and-accessories/my-toyota/myt</a>
+        For more information on Toyota MyT see the
+        <a href="https://www.toyota.at/service-und-zubehoer/myt.json">Austrian</a>,
+        <a href="https://nl.toyota.be/customer-portal/myt">Belgian</a>,
+        <a href="https://www.toyota.co.uk/owners/servicing-and-aftercare/my-toyota/myt-and-connected-services">British</a>,
+        <a href="https://www.toyota.dk/service-and-accessories/my-toyota/myt#">Danish</a>,
+        <a href="https://www.toyota.nl/service-and-accessories/my-toyota/myt.json">Dutch</a>,
+        <a href="https://www.toyota-europe.com/service-and-accessories/my-toyota/myt">European</a>,
+        <a href="https://www.toyota.fr/service-and-accessories/my-toyota/myt">French</a>,
+        <a href="https://www.toyota.de/service_und_zubehoer/myt">German</a>,
+        <a href="https://www.toyota.it/gamma/myt-servizi-connessi">Italian</a>,
+        <a href="https://www.toyota.es/MyT/">Spanish</a> or
+        <a href="https://fr.toyota.ch/owners/myt-app-multimedia">Swiss</a> website.
         </p>
         <p>
         The Toyota car should first be made available in the MyT connected services,
@@ -51,6 +61,7 @@
     </params>
 </plugin>
 """
+# pylint:enable=line-too-long
 
 import sys
 from abc import ABC, abstractmethod
