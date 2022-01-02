@@ -55,7 +55,7 @@
 import sys
 from abc import ABC, abstractmethod
 import asyncio
-from typing import Any, Union, List, Dict, Tuple, Optional
+from typing import Any, Union, List, Tuple, Optional
 
 _importErrors = ''  # pylint:disable=invalid-name
 
@@ -355,10 +355,7 @@ class ParkingLocationToyotaDevice(ToyotaDomoticzDevice):
 
     def __init__(self) -> None:
         super().__init__(UNIT_PARKING_LOCATION_INDEX)
-        self._address_cache: Dict[str, str] = {}
         self._last_coords: Tuple[str, ...] = ('', '')
-        self._lookup_address_requests: int = 0
-        self._lookup_address_cache_hits: int = 0
 
     def create(self, vehicle_status) -> None:
         """Check if the device is present in Domoticz, and otherwise create it."""
@@ -381,22 +378,12 @@ class ParkingLocationToyotaDevice(ToyotaDomoticzDevice):
                     Devices[self._unit_index].Update(nValue=0, sValue=f'{address}')
                     self._last_coords = coords_car
 
-    def _lookup_address(self, coords: Tuple[str, ...]) -> str:
+    def _lookup_address(self, coords: Tuple[str, ...]) -> str:     # pylint:disable=no-self-use
         """Determines the address of the given coordinates"""
-        self._lookup_address_requests += 1
         coord_str = ','.join(coordinate.strip().lower() for coordinate in coords[0:2])
-        if coord_str not in self._address_cache:
-            geolocator = Nominatim(user_agent=NOMINATIM_USER_AGENT)
-            location = geolocator.reverse(coord_str)
-            if location and location.address:
-                # To reduce the calls on the Nominatim API we will
-                # cache already determined addresses
-                self._address_cache[coord_str] = location.address
-        else:
-            self._lookup_address_cache_hits += 1
-        Domoticz.Log(f'Lookup address cache statistics: {self._lookup_address_cache_hits}'
-                     f'/{self._lookup_address_requests}')
-        return self._address_cache.get(coord_str, '')
+        geolocator = Nominatim(user_agent=NOMINATIM_USER_AGENT)
+        location = geolocator.reverse(coord_str)
+        return (location.address if location else '')
 
 class LockedToyotaDevice(ToyotaDomoticzDevice):
     """The Domoticz device that shows the locked/unlocked status of the car."""
