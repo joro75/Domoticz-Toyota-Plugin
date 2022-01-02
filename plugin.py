@@ -66,6 +66,7 @@
 import sys
 from abc import ABC, abstractmethod
 import asyncio
+import datetime
 from typing import Any, Union, List, Tuple, Optional
 
 _importErrors = ''  # pylint:disable=invalid-name
@@ -226,11 +227,23 @@ class DomoticzDevice(ABC):  # pylint:disable=too-few-public-methods
     def __init__(self, unit_index: int) -> None:
         super().__init__()
         self._unit_index = unit_index
+        self._last_update = datetime.datetime.now()
+        self._update_interval = 6 * 3600
+        self._do_first_update = True
 
     def exists(self) -> bool:
         """Check if the Domoticz device is present and existing."""
         return (self._unit_index in Devices) and (Devices[self._unit_index])
 
+    def did_update(self) -> None:
+        """Remember that an update of the device is done."""
+        self._last_update = datetime.datetime.now()
+        self._do_first_update = False
+
+    def requires_update(self) -> bool:
+        """Determine if an update of the device is needed."""
+        diff = datetime.datetime.now() - self._last_update
+        return (diff.seconds > self._update_interval) or self._do_first_update
 
 class ToyotaDomoticzDevice(DomoticzDevice):
     """
@@ -281,10 +294,11 @@ class MileageToyotaDevice(ToyotaDomoticzDevice):
             if self.exists():
                 mileage = vehicle_status.odometer.mileage
                 diff = mileage - self._last_mileage
-                if diff > 0:
+                if diff > 0 or self.requires_update():
                     # Mileage can only go up
                     Devices[self._unit_index].Update(nValue=0, sValue=f'{diff}')
                     self._last_mileage = mileage
+                    self.did_update()
 
 
 class FuelToyotaDevice(ToyotaDomoticzDevice):
@@ -317,9 +331,10 @@ class FuelToyotaDevice(ToyotaDomoticzDevice):
         if vehicle_status and vehicle_status.energy:
             if self.exists():
                 fuel = vehicle_status.energy.level
-                if fuel != self._last_fuel:
+                if fuel != self._last_fuel or self.requires_update():
                     Devices[self._unit_index].Update(nValue=int(float(fuel)), sValue=str(fuel))
                     self._last_fuel = fuel
+                    self.did_update()
 
 
 class DistanceToyotaDevice(ToyotaDomoticzDevice):
@@ -354,12 +369,13 @@ class DistanceToyotaDevice(ToyotaDomoticzDevice):
                 if not self._coordinates_home is None:
                     coords_car = (float(vehicle_status.parking.latitude),
                                   float(vehicle_status.parking.longitude))
-                    if coords_car != self._last_coords:
+                    if coords_car != self._last_coords or self.requires_update():
                         dist = geopy.distance.distance(self._coordinates_home, coords_car).km
                         # Round it to meters.
                         dist = round(dist, 3)
                         Devices[self._unit_index].Update(nValue=0, sValue=f'{dist}')
                         self._last_coords = coords_car
+                        self.did_update()
 
 class ParkingLocationToyotaDevice(ToyotaDomoticzDevice):
     """The Domoticz device that shows the address of the parking location of the car."""
@@ -384,10 +400,11 @@ class ParkingLocationToyotaDevice(ToyotaDomoticzDevice):
             if self.exists():
                 coords_car = (str(vehicle_status.parking.latitude),
                               str(vehicle_status.parking.longitude))
-                if coords_car != self._last_coords:
+                if coords_car != self._last_coords or self.requires_update():
                     address = self._lookup_address(coords_car)
                     Devices[self._unit_index].Update(nValue=0, sValue=f'{address}')
                     self._last_coords = coords_car
+                    self.did_update()
 
     def _lookup_address(self, coords: Tuple[str, ...]) -> str:     # pylint:disable=no-self-use
         """Determines the address of the given coordinates"""
@@ -426,6 +443,7 @@ class LockedToyotaDevice(ToyotaDomoticzDevice):
                         pass
                 state = 1 if locked else 0
                 Devices[self._unit_index].Update(nValue=state, sValue=str(state))
+                self.did_update()
 
 class ToyotaPlugin(ReducedHeartBeat, ToyotaMyTConnector):
     """Domoticz plugin function implementation to get information from Toyota MyT."""
