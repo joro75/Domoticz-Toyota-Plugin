@@ -436,9 +436,10 @@ class LockedToyotaDevice(ToyotaDomoticzDevice):
         if vehicle_status and vehicle_status.sensors.doors:
             if self.exists():
                 locked = True
-                for door in vehicle_status.sensors.doors.as_dict():
+                doordict = vehicle_status.sensors.doors.as_dict()
+                for door in doordict:
                     try:
-                        locked = locked and door.get('locked', True)
+                        locked = locked and doordict[door].get('locked', True)
                     except AttributeError:
                         pass
                 state = 1 if locked else 0
