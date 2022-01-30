@@ -8,10 +8,10 @@
 # CodingGuidelines 2020-04-11
 # pylint:disable=line-too-long
 """
-<plugin key="Toyota" name="Toyota" author="joro75" version="0.8.1"
+<plugin key="Toyota" name="Toyota" author="joro75" version="0.8.2"
         externallink="https://github.com/joro75/Domoticz-Toyota-Plugin">
     <description>
-        <h2>Domoticz Toyota Plugin 0.8.1</h2>
+        <h2>Domoticz Toyota Plugin 0.8.2</h2>
         <p>
         A Domoticz plugin that provides devices for a Toyota car with connected services.
         </p>
@@ -436,9 +436,10 @@ class LockedToyotaDevice(ToyotaDomoticzDevice):
         if vehicle_status and vehicle_status.sensors.doors:
             if self.exists():
                 locked = True
-                for door in vehicle_status.sensors.doors.as_dict():
+                doordict = vehicle_status.sensors.doors.as_dict()
+                for door in doordict:
                     try:
-                        locked = locked and door.get('locked', True)
+                        locked = locked and doordict[door].get('locked', True)
                     except AttributeError:
                         pass
                 state = 1 if locked else 0
