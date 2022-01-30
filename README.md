@@ -1,5 +1,5 @@
-# Domoticz-Toyota-Plugin 0.8.1
-[![PyPI pyversions](https://img.shields.io/badge/python-3.7-blue.svg)]() [![Plugin version](https://img.shields.io/badge/version-0.8.1-red.svg)](https://github.com/joro75/Domoticz-Toyota-Plugin/branches)
+# Domoticz-Toyota-Plugin 0.8.2
+[![PyPI pyversions](https://img.shields.io/badge/python-3.7-blue.svg)]() [![Plugin version](https://img.shields.io/badge/version-0.8.2-red.svg)](https://github.com/joro75/Domoticz-Toyota-Plugin/branches)
 
 A Domoticz plugin that provides devices for a Toyota car with connected services.
 

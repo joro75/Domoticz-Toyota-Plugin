@@ -8,10 +8,10 @@
 # CodingGuidelines 2020-04-11
 # pylint:disable=line-too-long
 """
-<plugin key="Toyota" name="Toyota" author="joro75" version="0.8.1"
+<plugin key="Toyota" name="Toyota" author="joro75" version="0.8.2"
         externallink="https://github.com/joro75/Domoticz-Toyota-Plugin">
     <description>
-        <h2>Domoticz Toyota Plugin 0.8.1</h2>
+        <h2>Domoticz Toyota Plugin 0.8.2</h2>
         <p>
         A Domoticz plugin that provides devices for a Toyota car with connected services.
         </p>
