@@ -418,6 +418,7 @@ class LockedToyotaDevice(ToyotaDomoticzDevice):
 
     def __init__(self) -> None:
         super().__init__(UNIT_CAR_LOCKED_INDEX)
+        self._last_state = -1
 
     def create(self, vehicle_status) -> None:
         """Check if the device is present in Domoticz, and otherwise create it."""
@@ -443,8 +444,10 @@ class LockedToyotaDevice(ToyotaDomoticzDevice):
                     except AttributeError:
                         pass
                 state = 1 if locked else 0
-                Devices[self._unit_index].Update(nValue=state, sValue=str(state))
-                self.did_update()
+                if state != self._last_state or self.requires_update():
+                    Devices[self._unit_index].Update(nValue=state, sValue=str(state))
+                    self._last_state = state
+                    self.did_update()
 
 class ToyotaPlugin(ReducedHeartBeat, ToyotaMyTConnector):
     """Domoticz plugin function implementation to get information from Toyota MyT."""
