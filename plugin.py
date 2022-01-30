@@ -8,10 +8,10 @@
 # CodingGuidelines 2020-04-11
 # pylint:disable=line-too-long
 """
-<plugin key="Toyota" name="Toyota" author="joro75" version="0.8.2"
+<plugin key="Toyota" name="Toyota" author="joro75" version="0.8.3"
         externallink="https://github.com/joro75/Domoticz-Toyota-Plugin">
     <description>
-        <h2>Domoticz Toyota Plugin 0.8.2</h2>
+        <h2>Domoticz Toyota Plugin 0.8.3</h2>
         <p>
         A Domoticz plugin that provides devices for a Toyota car with connected services.
         </p>
@@ -423,7 +423,7 @@ class LockedToyotaDevice(ToyotaDomoticzDevice):
     def create(self, vehicle_status) -> None:
         """Check if the device is present in Domoticz, and otherwise create it."""
         if vehicle_status:
-            if not self.exists():
+            if not self.exists() and self._has_info(vehicle_status):
                 Domoticz.Image('ToyotaLocked.zip').Create()
                 Domoticz.Device(Name='Locked', Unit=self._unit_index,
                                 TypeName='Light/Switch', Type=244, Subtype=73, Switchtype=19,
@@ -431,6 +431,20 @@ class LockedToyotaDevice(ToyotaDomoticzDevice):
                                 Description='The locked/unlocked state of the car',
                                 Image=Images['ToyotaLocked'].ID
                                 ).Create()
+
+    def _has_info(self, vehicle_status) -> bool:     # pylint:disable=no-self-use
+        """Determine if the information of the locked state is available."""
+        present = False
+        if vehicle_status and vehicle_status.sensors.doors:
+            doordict = vehicle_status.sensors.doors.as_dict()
+            for door in doordict:
+                try:
+                    present = present or ('locked' in doordict[door])
+                except AttributeError:
+                    pass
+                except TypeError:
+                    pass
+        return present
 
     def update(self, vehicle_status) -> None:
         """Determine the actual value of the instrument and update the device in Domoticz."""
