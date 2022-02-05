@@ -4,7 +4,9 @@
 A Domoticz plugin that provides devices for a Toyota car with connected services.
 
 Be aware that since version 0.9.0 also an update of mytoyota to version 0.8.0 is required, so ensure that
-It is using the same API that is used by the Toyota MyT connected services
+also the mytoyota Python module is updated!
+
+This plugin is using the same API that is used by the Toyota MyT connected services
 app. This API is however only useable for cars that are purchased in Europe.
 For more information on Toyota MyT see the [Austrian][MyT_Austrian],
 [Belgian][MyT_Belgian], [British][MyT_British], [Danish][MyT_Danish],
