@@ -1,8 +1,9 @@
-# Domoticz-Toyota-Plugin 0.8.3
-[![PyPI pyversions](https://img.shields.io/badge/python-3.7-blue.svg)]() [![Plugin version](https://img.shields.io/badge/version-0.8.3-red.svg)](https://github.com/joro75/Domoticz-Toyota-Plugin/branches)
+# Domoticz-Toyota-Plugin 0.9.0
+[![PyPI pyversions](https://img.shields.io/badge/python-3.7-blue.svg)]() [![Plugin version](https://img.shields.io/badge/version-0.9.0-red.svg)](https://github.com/joro75/Domoticz-Toyota-Plugin/branches)
 
 A Domoticz plugin that provides devices for a Toyota car with connected services.
 
+Be aware that since version 0.9.0 also an update of mytoyota to version 0.8.0 is required, so ensure that
 It is using the same API that is used by the Toyota MyT connected services
 app. This API is however only useable for cars that are purchased in Europe.
 For more information on Toyota MyT see the [Austrian][MyT_Austrian],
@@ -27,10 +28,6 @@ devices in Domoticz.
 ## Installation and Setup
 - a running Domoticz installation, tested with version 2021.1 and Python 3.7
 - Python >= 3.7
-- install needed python modules:
-   - [mytoyota](https://github.com/DurgNomis-drol/mytoyota) Version 0.7.6
-   - [geopy](https://github.com/geopy/geopy) Version 2.2.0
-   - you can use `sudo pip3 install -r requirements.txt`
 - clone project
     - go to `domoticz/plugins` directory
     - clone the project
@@ -39,9 +36,15 @@ devices in Domoticz.
         git clone https://github.com/joro75/Domoticz-Toyota-Plugin.git
         ```
 - or just download, unzip and copy to `domoticz/plugins`
-- no need on Raspbian for sys path adaption if using sudo for pip3
+- install needed python modules:
+   - [mytoyota](https://github.com/DurgNomis-drol/mytoyota) Version 0.8.0
+   - [geopy](https://github.com/geopy/geopy) Version 2.2.0
+   - setuptools Version >= 57.0.0
+   - for an automated install of these, you can use `sudo pip3 install -r requirements.txt`
 - restart Domoticz service
-- Now go to **Setup**, **Hardware** in your Domoticz interface. There add **Toyota** plugin.
+- Now go to **Setup**, **Hardware** in your Domoticz interface. There add the **Toyota** plugin.
+- Configure the username and password that is also used for the Toyota MyT connected services.
+- If one or more errors are detected during the start of the plugin, this will be reported as errors in the Domoticz log.
 
 ### Settings
 | Parameter   | Information                                                                                                                                                                                  |
@@ -59,7 +62,8 @@ The following icons from the [Noun Project](https://thenounproject.com) are used
 * [locked](https://thenounproject.com/search/?q=car+locked&i=3863407#) by Andrejs Kirma from the Noun Project
 
 ## State and development
-The current version is working for my situation. It however is not tested yet by other users, but it should
+The current version is working for my situation, and a few others. It will be impossible for me to test the plugin with every Toyota car model
+as there is a large variation in the provided data for each Toyota car and they also can have own specific options. However most of the functionality should
 be working. The number of provided devices is not complete yet, and future updates will add additional devices.
 
 This plugin is using pre-commit. If you would like to contribute an improvement, fork this repository and

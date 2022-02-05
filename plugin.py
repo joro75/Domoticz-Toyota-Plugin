@@ -8,10 +8,10 @@
 # CodingGuidelines 2020-04-11
 # pylint:disable=line-too-long
 """
-<plugin key="Toyota" name="Toyota" author="joro75" version="0.8.3"
+<plugin key="Toyota" name="Toyota" author="joro75" version="0.9.0"
         externallink="https://github.com/joro75/Domoticz-Toyota-Plugin">
     <description>
-        <h2>Domoticz Toyota Plugin 0.8.3</h2>
+        <h2>Domoticz Toyota Plugin 0.9.0</h2>
         <p>
         A Domoticz plugin that provides devices for a Toyota car with connected services.
         </p>
@@ -69,6 +69,12 @@ import asyncio
 import datetime
 from typing import Any, Union, List, Tuple, Optional
 
+MINIMUM_PYTHON_VERSION = (3, 7)
+DO_DOMOTICZ_DEBUGGING: bool = False
+MINIMUM_MYTOYOTA_VERSION: str = '0.8.0'
+
+NOMINATIM_USER_AGENT = 'Domoticz-Toyota-Plugin'
+
 _importErrors = []  # pylint:disable=invalid-name
 
 try:
@@ -115,10 +121,6 @@ try:
 except (ModuleNotFoundError, ImportError):
     _importErrors += ['The python geopy library is not installed.']
 
-MINIMUM_PYTHON_VERSION = (3, 7)
-DO_DOMOTICZ_DEBUGGING: bool = False
-
-NOMINATIM_USER_AGENT = 'Domoticz-Toyota-Plugin'
 
 UNIT_MILEAGE_INDEX: int = 1
 UNIT_FUEL_INDEX: int = 2
