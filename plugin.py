@@ -8,10 +8,10 @@
 # CodingGuidelines 2020-04-11
 # pylint:disable=line-too-long
 """
-<plugin key="Toyota" name="Toyota" author="joro75" version="0.8.3"
+<plugin key="Toyota" name="Toyota" author="joro75" version="0.9.0"
         externallink="https://github.com/joro75/Domoticz-Toyota-Plugin">
     <description>
-        <h2>Domoticz Toyota Plugin 0.8.3</h2>
+        <h2>Domoticz Toyota Plugin 0.9.0</h2>
         <p>
         A Domoticz plugin that provides devices for a Toyota car with connected services.
         </p>
@@ -69,41 +69,66 @@ import asyncio
 import datetime
 from typing import Any, Union, List, Tuple, Optional
 
-_importErrors = ''  # pylint:disable=invalid-name
+MINIMUM_PYTHON_VERSION = (3, 7)
+DO_DOMOTICZ_DEBUGGING: bool = False
+MINIMUM_MYTOYOTA_VERSION: str = '0.8.0'
+MINIMUM_GEOPY_VERSION: str = '2.2.0'
+
+NOMINATIM_USER_AGENT = 'Domoticz-Toyota-Plugin'
+
+_importErrors = []  # pylint:disable=invalid-name
 
 try:
     import Domoticz  # type: ignore
-except ImportError:
-    _importErrors += ('The Python Domoticz library is not installed. '
-                      'This plugin can only be used in Domoticz. '
-                      'Check your Domoticz installation')
+except (ModuleNotFoundError, ImportError):
+    _importErrors += [('The Python Domoticz library is not installed. '
+                       'This plugin can only be used in Domoticz. '
+                       'Check your Domoticz installation')]
 
 # Fool mypy and pylint that these types are coming from Domoticz
 try:
     from Domoticz import Parameters, Devices, Settings, Images
-except ImportError:
+except (ModuleNotFoundError, ImportError):
     pass
 
 try:
+    import setuptools    # type: ignore
+    Version = setuptools.distutils.version.LooseVersion
+except (ModuleNotFoundError, ImportError):
+    _importErrors += ['The python setuptools library is not installed.']
+
+try:
     import mytoyota  # type: ignore
-    from mytoyota.client import MyT  # type: ignore
-    import mytoyota.exceptions  # type: ignore
-    import mytoyota.vehicle  # type: ignore
-except ImportError:
-    _importErrors += ('The Python mytoyota library is not installed. '
-                      'Use pip to install mytoyota: pip3 install -r requirements.txt')
+
+    try:
+        mytoyota_version = Version(mytoyota.__version__)
+        if mytoyota_version < Version(MINIMUM_MYTOYOTA_VERSION):
+            _importErrors += ['The mytoyota version is too old, an update is needed.']
+            del mytoyota
+            del sys.modules['mytoyota']
+    except AttributeError:
+        _importErrors += ['The mytoyota version is too old, an update is needed.']
+
+    if 'mytoyota' in sys.modules:
+        from mytoyota import MyT  # type: ignore
+        import mytoyota.exceptions  # type: ignore
+        import mytoyota.models.vehicle  # type: ignore
+except (ModuleNotFoundError, ImportError):
+    _importErrors += ['The Python mytoyota library is not installed.']
 
 try:
     import geopy.distance  # type: ignore
-    from geopy.geocoders import Nominatim  # type: ignore
-except ImportError:
-    _importErrors += ('The python geopy library is not installed. '
-                      'Use pip to install geopy: pip3 install -r requirements.txt')
+    geopy_version = Version(geopy.__version__)
+    if geopy_version < Version(MINIMUM_GEOPY_VERSION):
+        _importErrors += ['The geopy version is too old, an update is needed.']
+        del geopy
+        del sys.modules['geopy']
 
-MINIMUM_PYTHON_VERSION = (3, 7)
-DO_DOMOTICZ_DEBUGGING: bool = False
+    if 'geopy' in sys.modules:
+        from geopy.geocoders import Nominatim  # type: ignore
+except (ModuleNotFoundError, ImportError):
+    _importErrors += ['The python geopy library is not installed.']
 
-NOMINATIM_USER_AGENT = 'Domoticz-Toyota-Plugin'
 
 UNIT_MILEAGE_INDEX: int = 1
 UNIT_FUEL_INDEX: int = 2
@@ -140,9 +165,9 @@ class ToyotaMyTConnector():
         self._logged_on = False
         self._loop = asyncio.get_event_loop()
         self._client: MyT = None
-        self._car: mytoyota.vehicle.Vehicle = None
+        self._car: mytoyota.models.vehicle.Vehicle = None
 
-    def _lookup_car(self, cars: Optional[List], identifier: str) -> mytoyota.vehicle.Vehicle:    # pylint:disable=no-self-use
+    def _lookup_car(self, cars: Optional[List], identifier: str) -> mytoyota.models.vehicle.Vehicle:    # pylint:disable=no-self-use
         """Find and eturn the first car from cars that confirms to the passed identifier."""
         if not cars is None and identifier:
             car_id = identifier.upper().strip()
@@ -163,9 +188,7 @@ class ToyotaMyTConnector():
         cars: Optional[List[Any]] = None
         try:
             self._client = MyT(username=Parameters['Username'],
-                               password=Parameters['Password'],
-                               locale='nl-nl',
-                               region='europe')
+                               password=Parameters['Password'])
             self._loop.run_until_complete(self._client.login())
             cars = self._loop.run_until_complete(self._client.get_vehicles())
             self._logged_on = True
@@ -290,9 +313,9 @@ class MileageToyotaDevice(ToyotaDomoticzDevice):
 
     def update(self, vehicle_status) -> None:
         """Determine the actual value of the instrument and update the device in Domoticz."""
-        if vehicle_status and vehicle_status.odometer:
+        if vehicle_status and vehicle_status.dashboard:
             if self.exists():
-                mileage = vehicle_status.odometer.mileage
+                mileage = vehicle_status.dashboard.odometer
                 diff = mileage - self._last_mileage
                 if diff > 0 or self.requires_update():
                     # Mileage can only go up
@@ -328,9 +351,9 @@ class FuelToyotaDevice(ToyotaDomoticzDevice):
 
     def update(self, vehicle_status) -> None:
         """Determine the actual value of the instrument and update the device in Domoticz."""
-        if vehicle_status and vehicle_status.energy:
+        if vehicle_status and vehicle_status.dashboard:
             if self.exists():
-                fuel = vehicle_status.energy.level
+                fuel = vehicle_status.dashboard.fuel_level
                 if fuel != self._last_fuel or self.requires_update():
                     Devices[self._unit_index].Update(nValue=int(float(fuel)), sValue=str(fuel))
                     self._last_fuel = fuel
@@ -353,8 +376,8 @@ class DistanceToyotaDevice(ToyotaDomoticzDevice):
 
     def create(self, vehicle_status) -> None:
         """Check if the device is present in Domoticz, and otherwise create it."""
-        if vehicle_status.parking:
-            if not self.exists():
+        if vehicle_status.parkinglocation:
+            if not self.exists() and 'geopy' in sys.modules:
                 Domoticz.Device(Name='Distance to home', Unit=self._unit_index,
                                 TypeName='Custom Sensor', Type=243, Subtype=31,
                                 Options={'Custom': '1;km'},
@@ -364,11 +387,11 @@ class DistanceToyotaDevice(ToyotaDomoticzDevice):
 
     def update(self, vehicle_status) -> None:
         """Determine the actual value of the instrument and update the device in Domoticz."""
-        if vehicle_status and vehicle_status.parking:
-            if self.exists():
+        if vehicle_status and vehicle_status.parkinglocation:
+            if self.exists() and 'geopy' in sys.modules:
                 if not self._coordinates_home is None:
-                    coords_car = (float(vehicle_status.parking.latitude),
-                                  float(vehicle_status.parking.longitude))
+                    coords_car = (float(vehicle_status.parkinglocation.latitude),
+                                  float(vehicle_status.parkinglocation.longitude))
                     if coords_car != self._last_coords or self.requires_update():
                         dist = geopy.distance.distance(self._coordinates_home, coords_car).km
                         # Round it to meters.
@@ -386,8 +409,8 @@ class ParkingLocationToyotaDevice(ToyotaDomoticzDevice):
 
     def create(self, vehicle_status) -> None:
         """Check if the device is present in Domoticz, and otherwise create it."""
-        if vehicle_status.parking:
-            if not self.exists():
+        if vehicle_status.parkinglocation:
+            if not self.exists() and 'geopy' in sys.modules:
                 Domoticz.Device(Name='Parking location', Unit=self._unit_index,
                                 TypeName='Text', Type=243, Subtype=19,
                                 Used=1,
@@ -396,10 +419,10 @@ class ParkingLocationToyotaDevice(ToyotaDomoticzDevice):
 
     def update(self, vehicle_status) -> None:
         """Determine the actual value of the instrument and update the device in Domoticz."""
-        if vehicle_status and vehicle_status.parking:
-            if self.exists():
-                coords_car = (str(vehicle_status.parking.latitude),
-                              str(vehicle_status.parking.longitude))
+        if vehicle_status and vehicle_status.parkinglocation:
+            if self.exists() and 'geopy' in sys.modules:
+                coords_car = (str(vehicle_status.parkinglocation.latitude),
+                              str(vehicle_status.parkinglocation.longitude))
                 if coords_car != self._last_coords or self.requires_update():
                     address = self._lookup_address(coords_car)
                     Devices[self._unit_index].Update(nValue=0, sValue=f'{address}')
@@ -432,36 +455,40 @@ class LockedToyotaDevice(ToyotaDomoticzDevice):
                                 Image=Images['ToyotaLocked'].ID
                                 ).Create()
 
+    def _get_doors(self, vehicle_status):    # pylint:disable=no-self-use
+        """Return an array of individual door instances"""
+        doors = []
+        if vehicle_status and vehicle_status.sensors.doors:
+            direct = vehicle_status.sensors.doors
+            try:
+                doors = [direct.driver_seat, direct.passenger_seat,
+                         direct.leftrear_seat, direct.rightrear_seat,
+                         direct.trunk]
+            except (AttributeError, TypeError):
+                pass
+        return doors
+
     def _has_info(self, vehicle_status) -> bool:     # pylint:disable=no-self-use
         """Determine if the information of the locked state is available."""
         present = False
-        if vehicle_status and vehicle_status.sensors.doors:
-            doordict = vehicle_status.sensors.doors.as_dict()
-            for door in doordict:
-                try:
-                    present = present or ('locked' in doordict[door])
-                except AttributeError:
-                    pass
-                except TypeError:
-                    pass
+        for door in self._get_doors(vehicle_status):
+            present = present or door is not None
         return present
 
     def update(self, vehicle_status) -> None:
         """Determine the actual value of the instrument and update the device in Domoticz."""
-        if vehicle_status and vehicle_status.sensors.doors:
-            if self.exists():
-                locked = True
-                doordict = vehicle_status.sensors.doors.as_dict()
-                for door in doordict:
-                    try:
-                        locked = locked and doordict[door].get('locked', True)
-                    except AttributeError:
-                        pass
-                state = 1 if locked else 0
-                if state != self._last_state or self.requires_update():
-                    Devices[self._unit_index].Update(nValue=state, sValue=str(state))
-                    self._last_state = state
-                    self.did_update()
+        if self.exists():
+            locked = True
+            for door in self._get_doors(vehicle_status):
+                try:
+                    locked = locked and door.locked if door is not None else True
+                except AttributeError:
+                    pass
+            state = 1 if locked else 0
+            if state != self._last_state or self.requires_update():
+                Devices[self._unit_index].Update(nValue=state, sValue=str(state))
+                self._last_state = state
+                self.did_update()
 
 class ToyotaPlugin(ReducedHeartBeat, ToyotaMyTConnector):
     """Domoticz plugin function implementation to get information from Toyota MyT."""
@@ -493,7 +520,7 @@ class ToyotaPlugin(ReducedHeartBeat, ToyotaMyTConnector):
                 device.create(vehicle_status)
 
 
-_plugin = ToyotaPlugin()  # pylint:disable=invalid-name
+_plugin = ToyotaPlugin() if 'mytoyota' in sys.modules else None  # pylint:disable=invalid-name
 
 def onStart() -> None:  # pylint:disable=invalid-name
     """Callback from Domoticz that the plugin is started."""
@@ -504,19 +531,25 @@ def onStart() -> None:  # pylint:disable=invalid-name
         Domoticz.Error(f'Python version {sys.version_info} is not supported,'
                        f' at least {MINIMUM_PYTHON_VERSION} is required.')
     else:
+        global _importErrors      # pylint:disable=invalid-name,global-statement
         if _importErrors:
-            Domoticz.Error(_importErrors)
-        else:
+            _importErrors += [('Use pip to install required packages: '
+                               'pip3 install -r requirements.txt')]
+            for err in _importErrors:
+                Domoticz.Error(err)
+        elif _plugin:
             _plugin.add_devices()
             _plugin.create_devices()
 
 def onStop() -> None:  # pylint:disable=invalid-name
     """Callback from Domoticz that the plugin is stopped."""
-    _plugin.disconnect()
+    if _plugin:
+        _plugin.disconnect()
 
 def onHeartbeat() -> None:  # pylint:disable=invalid-name
     """Callback from Domoticz that the plugin can perform some work."""
-    _plugin.onHeartbeat()
+    if _plugin:
+        _plugin.onHeartbeat()
 
 def dump_config_to_log() -> None:
     """Dump the configuration of the plugin to the Domoticz debug log."""
