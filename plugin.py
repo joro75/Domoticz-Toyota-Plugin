@@ -69,36 +69,51 @@ import asyncio
 import datetime
 from typing import Any, Union, List, Tuple, Optional
 
-_importErrors = ''  # pylint:disable=invalid-name
+_importErrors = []  # pylint:disable=invalid-name
 
 try:
     import Domoticz  # type: ignore
-except ImportError:
-    _importErrors += ('The Python Domoticz library is not installed. '
-                      'This plugin can only be used in Domoticz. '
-                      'Check your Domoticz installation')
+except (ModuleNotFoundError, ImportError):
+    _importErrors += [('The Python Domoticz library is not installed. '
+                       'This plugin can only be used in Domoticz. '
+                       'Check your Domoticz installation')]
 
 # Fool mypy and pylint that these types are coming from Domoticz
 try:
     from Domoticz import Parameters, Devices, Settings, Images
-except ImportError:
+except (ModuleNotFoundError, ImportError):
     pass
 
 try:
+    import setuptools    # type: ignore
+    Version = setuptools.distutils.version.LooseVersion
+except (ModuleNotFoundError, ImportError):
+    _importErrors += ['The python setuptools library is not installed.']
+
+try:
     import mytoyota  # type: ignore
-    from mytoyota.client import MyT  # type: ignore
-    import mytoyota.exceptions  # type: ignore
-    import mytoyota.vehicle  # type: ignore
-except ImportError:
-    _importErrors += ('The Python mytoyota library is not installed. '
-                      'Use pip to install mytoyota: pip3 install -r requirements.txt')
+
+    try:
+        mytoyota_version = Version(mytoyota.__version__)
+        if mytoyota_version < Version('0.8.0'):
+            _importErrors += ['The mytoyota version is to old, an update is needed.']
+            del mytoyota
+            del sys.modules['mytoyota']
+    except AttributeError:
+        _importErrors += ['The mytoyota version is to old, an update is needed.']
+
+    if 'mytoyota' in sys.modules:
+        from mytoyota.client import MyT  # type: ignore
+        import mytoyota.exceptions  # type: ignore
+        import mytoyota.vehicle  # type: ignore
+except (ModuleNotFoundError, ImportError):
+    _importErrors += ['The Python mytoyota library is not installed.']
 
 try:
     import geopy.distance  # type: ignore
     from geopy.geocoders import Nominatim  # type: ignore
-except ImportError:
-    _importErrors += ('The python geopy library is not installed. '
-                      'Use pip to install geopy: pip3 install -r requirements.txt')
+except (ModuleNotFoundError, ImportError):
+    _importErrors += ['The python geopy library is not installed.']
 
 MINIMUM_PYTHON_VERSION = (3, 7)
 DO_DOMOTICZ_DEBUGGING: bool = False
@@ -493,7 +508,7 @@ class ToyotaPlugin(ReducedHeartBeat, ToyotaMyTConnector):
                 device.create(vehicle_status)
 
 
-_plugin = ToyotaPlugin()  # pylint:disable=invalid-name
+_plugin = ToyotaPlugin() if 'mytoyota' in sys.modules else None  # pylint:disable=invalid-name
 
 def onStart() -> None:  # pylint:disable=invalid-name
     """Callback from Domoticz that the plugin is started."""
@@ -504,19 +519,25 @@ def onStart() -> None:  # pylint:disable=invalid-name
         Domoticz.Error(f'Python version {sys.version_info} is not supported,'
                        f' at least {MINIMUM_PYTHON_VERSION} is required.')
     else:
+        global _importErrors      # pylint:disable=invalid-name,global-statement
         if _importErrors:
-            Domoticz.Error(_importErrors)
-        else:
+            _importErrors += [('Use pip to install required packages: '
+                               'pip3 install -r requirements.txt')]
+            for err in _importErrors:
+                Domoticz.Error(err)
+        elif _plugin:
             _plugin.add_devices()
             _plugin.create_devices()
 
 def onStop() -> None:  # pylint:disable=invalid-name
     """Callback from Domoticz that the plugin is stopped."""
-    _plugin.disconnect()
+    if _plugin:
+        _plugin.disconnect()
 
 def onHeartbeat() -> None:  # pylint:disable=invalid-name
     """Callback from Domoticz that the plugin can perform some work."""
-    _plugin.onHeartbeat()
+    if _plugin:
+        _plugin.onHeartbeat()
 
 def dump_config_to_log() -> None:
     """Dump the configuration of the plugin to the Domoticz debug log."""
