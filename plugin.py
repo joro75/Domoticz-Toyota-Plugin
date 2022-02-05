@@ -72,6 +72,7 @@ from typing import Any, Union, List, Tuple, Optional
 MINIMUM_PYTHON_VERSION = (3, 7)
 DO_DOMOTICZ_DEBUGGING: bool = False
 MINIMUM_MYTOYOTA_VERSION: str = '0.8.0'
+MINIMUM_GEOPY_VERSION: str = '2.2.0'
 
 NOMINATIM_USER_AGENT = 'Domoticz-Toyota-Plugin'
 
@@ -101,12 +102,12 @@ try:
 
     try:
         mytoyota_version = Version(mytoyota.__version__)
-        if mytoyota_version < Version('0.8.0'):
-            _importErrors += ['The mytoyota version is to old, an update is needed.']
+        if mytoyota_version < Version(MINIMUM_MYTOYOTA_VERSION):
+            _importErrors += ['The mytoyota version is too old, an update is needed.']
             del mytoyota
             del sys.modules['mytoyota']
     except AttributeError:
-        _importErrors += ['The mytoyota version is to old, an update is needed.']
+        _importErrors += ['The mytoyota version is too old, an update is needed.']
 
     if 'mytoyota' in sys.modules:
         from mytoyota import MyT  # type: ignore
@@ -117,7 +118,14 @@ except (ModuleNotFoundError, ImportError):
 
 try:
     import geopy.distance  # type: ignore
-    from geopy.geocoders import Nominatim  # type: ignore
+    geopy_version = Version(geopy.__version__)
+    if geopy_version < Version(MINIMUM_GEOPY_VERSION):
+        _importErrors += ['The geopy version is too old, an update is needed.']
+        del geopy
+        del sys.modules['geopy']
+
+    if 'geopy' in sys.modules:
+        from geopy.geocoders import Nominatim  # type: ignore
 except (ModuleNotFoundError, ImportError):
     _importErrors += ['The python geopy library is not installed.']
 
@@ -369,7 +377,7 @@ class DistanceToyotaDevice(ToyotaDomoticzDevice):
     def create(self, vehicle_status) -> None:
         """Check if the device is present in Domoticz, and otherwise create it."""
         if vehicle_status.parkinglocation:
-            if not self.exists():
+            if not self.exists() and 'geopy' in sys.modules:
                 Domoticz.Device(Name='Distance to home', Unit=self._unit_index,
                                 TypeName='Custom Sensor', Type=243, Subtype=31,
                                 Options={'Custom': '1;km'},
@@ -380,7 +388,7 @@ class DistanceToyotaDevice(ToyotaDomoticzDevice):
     def update(self, vehicle_status) -> None:
         """Determine the actual value of the instrument and update the device in Domoticz."""
         if vehicle_status and vehicle_status.parkinglocation:
-            if self.exists():
+            if self.exists() and 'geopy' in sys.modules:
                 if not self._coordinates_home is None:
                     coords_car = (float(vehicle_status.parkinglocation.latitude),
                                   float(vehicle_status.parkinglocation.longitude))
@@ -402,7 +410,7 @@ class ParkingLocationToyotaDevice(ToyotaDomoticzDevice):
     def create(self, vehicle_status) -> None:
         """Check if the device is present in Domoticz, and otherwise create it."""
         if vehicle_status.parkinglocation:
-            if not self.exists():
+            if not self.exists() and 'geopy' in sys.modules:
                 Domoticz.Device(Name='Parking location', Unit=self._unit_index,
                                 TypeName='Text', Type=243, Subtype=19,
                                 Used=1,
@@ -412,7 +420,7 @@ class ParkingLocationToyotaDevice(ToyotaDomoticzDevice):
     def update(self, vehicle_status) -> None:
         """Determine the actual value of the instrument and update the device in Domoticz."""
         if vehicle_status and vehicle_status.parkinglocation:
-            if self.exists():
+            if self.exists() and 'geopy' in sys.modules:
                 coords_car = (str(vehicle_status.parkinglocation.latitude),
                               str(vehicle_status.parkinglocation.longitude))
                 if coords_car != self._last_coords or self.requires_update():
