@@ -1,10 +1,10 @@
 # Domoticz-Toyota-Plugin 0.9.0
 [![PyPI pyversions](https://img.shields.io/badge/python-3.7-blue.svg)]() [![Plugin version](https://img.shields.io/badge/version-0.9.0-red.svg)](https://github.com/joro75/Domoticz-Toyota-Plugin/branches)
 
-A Domoticz plugin that provides devices for a Toyota car with connected services.
+A Domoticz plugin that provides devices for a [Toyota][toyota] car with connected services.
 
-Be aware that since version 0.9.0 also an update of mytoyota to version 0.8.0 is required, so ensure that
-also the mytoyota Python module is updated!
+Be aware that since version 0.9.0 also an update of [mytoyota][mytoyota] to version 0.8.0 is required, so ensure that
+also the [mytoyota][myotyota] Python module is updated!
 
 This plugin is using the same API that is used by the Toyota MyT connected services
 app. This API is however only useable for cars that are purchased in Europe.
@@ -39,7 +39,7 @@ devices in Domoticz.
         ```
 - or just download, unzip and copy to `domoticz/plugins`
 - install needed python modules:
-   - [mytoyota](https://github.com/DurgNomis-drol/mytoyota) Version 0.8.0
+   - [mytoyota][mytoyota] Version 0.8.0
    - [geopy](https://github.com/geopy/geopy) Version 2.2.0
    - setuptools Version >= 57.0.0
    - for an automated install of these, you can use `sudo pip3 install -r requirements.txt`
@@ -83,3 +83,5 @@ and make sure that all tests are passing before requesting the PR.
 [MyT_Italian]: https://www.toyota.it/gamma/myt-servizi-connessi
 [MyT_Spanish]: https://www.toyota.es/MyT/
 [Myt_Swiss]: https://fr.toyota.ch/owners/myt-app-multimedia
+[mytoyota]: https://github.com/DurgNomis-drol/mytoyota
+[toyota]: https://global.toyota/en/
