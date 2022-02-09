@@ -1,7 +1,7 @@
 # Domoticz-Toyota-Plugin 0.9.0
 [![PyPI pyversions](https://img.shields.io/badge/python-3.7-blue.svg)]() [![Plugin version](https://img.shields.io/badge/version-0.9.0-red.svg)](https://github.com/joro75/Domoticz-Toyota-Plugin/branches)
 
-A Domoticz plugin that provides devices for a [Toyota][toyota] car with connected services.
+A [Domoticz][domoticz] plugin that provides devices for a [Toyota][toyota] car with connected services.
 
 Be aware that since version 0.9.0 also an update of [mytoyota][mytoyota] to version 0.8.0 is required, so ensure that
 also the [mytoyota][mytoyota] Python module is updated!
@@ -85,3 +85,4 @@ and make sure that all tests are passing before requesting the PR.
 [Myt_Swiss]: https://fr.toyota.ch/owners/myt-app-multimedia
 [mytoyota]: https://github.com/DurgNomis-drol/mytoyota
 [toyota]: https://global.toyota/en/
+[domoticz]: https://www.domoticz.com/
