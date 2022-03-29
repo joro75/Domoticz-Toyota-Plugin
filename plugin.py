@@ -542,6 +542,11 @@ class ConsumedFuelToyotaDevice(ToyotaDomoticzDevice):
                                 Options={'ValueUnits': 'l/100 km',
                                          'ValueQuantity': 'l/100 km'}
                                 ).Create()
+        if self.exists():
+            try:
+                self._last_consumed_fuel = float(Devices[self._unit_index].sValue)
+            except ValueError:
+                self._last_consumed_fuel = 0
 
     def update_statistics(self, statistics) -> None:
         """Determine the actual value of the statistics and update the device in Domoticz."""
@@ -549,13 +554,13 @@ class ConsumedFuelToyotaDevice(ToyotaDomoticzDevice):
             Domoticz.Log(f'{statistics}')
             fuel = float(statistics.get('totalFuelConsumedInL', 0.0)) if statistics else 0.0
             Domoticz.Log(f'Fuel consumed: {fuel}')
-            #if fuel != self._last_consumed_fuel or self.requires_update():
-            #    # Clear the counter for today
-            #    Devices[self._unit_index].Update(nValue=0, sValue='-1')
-            #    # Set the actual value for today
-            #    Devices[self._unit_index].Update(nValue=0, sValue=f'{fuel}')
-            #    self._last_consumed_fuel = fuel
-            #    self.did_update()
+            if fuel != self._last_consumed_fuel or self.requires_update():
+                # Restore the counter to 0
+                Devices[self._unit_index].Update(nValue=0, sValue=f'-{self._last_consumed_fuel}')
+                # Set the actual value for today
+                Devices[self._unit_index].Update(nValue=0, sValue=f'{fuel}')
+                self._last_consumed_fuel = fuel
+                self.did_update()
 
 
 class ToyotaPlugin(ReducedHeartBeat, ToyotaMyTConnector):
@@ -581,37 +586,10 @@ class ToyotaPlugin(ReducedHeartBeat, ToyotaMyTConnector):
         if vehicle_status:
             for device in self._devices:
                 device.update(vehicle_status)
-        # Also see: https://www.domoticz.com/forum/viewtopic.php?p=251156
-        # and: https://bugs.python.org/issue45485
-        #try:
-        #    del datetime
-        #except:
-        #    pass
-        #try:
-        #    del sys.modules['datetime']
-        #except:
-        #    pass
-        #datetime = None
-        #try:
-        #    datetime = importlib.import_module('datetime')
-        #except:
-        #    pass
-        #
-        #if self._now is None:
-        #    Domoticz.Log('self._now is None')
-        #Domoticz.Log(f'now: {self._now}')
-        #dt = datetime.datetime.strptime(str('40 2022'), str('%j %Y'))
-        #Domoticz.Log(f'dt: {dt}')
-        #ptime = arrow.Arrow.strptime(str('40 2022'), str('%j %Y'))
-        #Domoticz.Log(f'ptime: {ptime}')
-        #p = ptime.format()
-        #Domoticz.Log(f'parsed date: {p}')
-        statistics = None    #self.retrieve_statistics()
+        statistics = self.retrieve_statistics()
         if statistics:
-            Domoticz.Log('Statistics available')
             for device in self._devices:
-                Domoticz.Log('Calling update_statistics for ...')
-                #device.update_statistics(statistics)
+                device.update_statistics(statistics)
 
     def create_devices(self) -> None:
         """Create the appropiate devices in Domoticz for the vehicle."""
