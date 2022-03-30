@@ -26,6 +26,7 @@ devices in Domoticz.
 | Distance to home | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_distance_to_home.png' width='353' alt='Distance to home device'> | Shows the distance between the car and home          |
 | Locked           | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_locked_locked.png' width='353' alt='Locked device'>              | Shows if the car is locked or unlocked               |
 | Parking location | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/raw/main/resources/device_parking_location.png' width='353' alt='Parking location device'> | Shows the address of the parking location of the car |
+| Consumed fuel    | <img src='https://github.com/joro75/Domoticz-Toyota-Plugin/blob/main/resources/device_consumed_fuel.png' width='353' alt='Consumed fuel device'>      | Shows the consumed fuel in l/100 km                  |
 
 ## Installation and Setup
 - a running Domoticz installation, tested with version 2021.1 and Python 3.7

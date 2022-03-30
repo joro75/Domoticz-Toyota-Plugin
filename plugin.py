@@ -43,6 +43,7 @@
             <li>Distance to home - Shows the distance between the car and home</li>
             <li>Locked - Shows if the car is locked or unlocked</li>
             <li>Parking location - Shows the address of the parking location of the car</li>
+            <li>Consumed fuel - Shows the average consumed fuel in l/100 km</li>
         </ul>
         <h3>Configuration</h3>
         <ul style="list-style-type:square">
@@ -67,7 +68,8 @@ import sys
 from abc import ABC, abstractmethod
 import asyncio
 import datetime
-from typing import Any, Union, List, Tuple, Optional
+from typing import Any, Union, List, Tuple, Optional, Dict
+import arrow         # pylint:disable=import-error
 
 MINIMUM_PYTHON_VERSION = (3, 7)
 DO_DOMOTICZ_DEBUGGING: bool = False
@@ -135,6 +137,7 @@ UNIT_FUEL_INDEX: int = 2
 UNIT_DISTANCE_INDEX: int = 3
 UNIT_CAR_LOCKED_INDEX: int = 4
 UNIT_PARKING_LOCATION_INDEX: int = 5
+UNIT_CONSUMED_FUEL_INDEX: int = 6
 
 class ReducedHeartBeat(ABC):
     """Helper class that only calls the update of the devices every ... heartbeat."""
@@ -163,11 +166,11 @@ class ToyotaMyTConnector():
     def __init__(self) -> None:
         super().__init__()
         self._logged_on = False
-        self._loop = asyncio.get_event_loop()
         self._client: MyT = None
-        self._car: mytoyota.models.vehicle.Vehicle = None
+        self._car: Optional[Dict[str, Any]] = None
 
-    def _lookup_car(self, cars: Optional[List], identifier: str) -> mytoyota.models.vehicle.Vehicle:    # pylint:disable=no-self-use
+    def _lookup_car(self, cars: Optional[List[Dict[str, Any]]],   # pylint:disable=no-self-use
+                identifier: str) -> Optional[Dict[str, Any]]:
         """Find and eturn the first car from cars that confirms to the passed identifier."""
         if not cars is None and identifier:
             car_id = identifier.upper().strip()
@@ -189,8 +192,8 @@ class ToyotaMyTConnector():
         try:
             self._client = MyT(username=Parameters['Username'],
                                password=Parameters['Password'])
-            self._loop.run_until_complete(self._client.login())
-            cars = self._loop.run_until_complete(self._client.get_vehicles())
+            asyncio.run(self._client.login())
+            cars = asyncio.run(self._client.get_vehicles())
             self._logged_on = True
         except mytoyota.exceptions.ToyotaLoginError as ex:
             Domoticz.Error(f'Login Error: {ex}')
@@ -219,9 +222,8 @@ class ToyotaMyTConnector():
         """Check and return if a connection to Toyota MyT servers is present."""
         connected = False
         if self._logged_on:
-            if self._loop:
-                if self._car:
-                    connected = True
+            if self._car:
+                connected = True
         return connected
 
     def retrieve_vehicle_status(self) -> Union[Any, None]:
@@ -230,18 +232,45 @@ class ToyotaMyTConnector():
         if self._ensure_connected():
             Domoticz.Log('Updating vehicle status')
             try:
-                vehicle = self._loop.run_until_complete(self._client.get_vehicle_status(self._car))
+                vehicle = asyncio.run(self._client.get_vehicle_status(self._car))
             except mytoyota.exceptions.ToyotaInternalError:
                 pass
         if vehicle is None:
             Domoticz.Error('Vehicle status could not be retrieved')
         return vehicle
 
+    def retrieve_statistics(self) -> Optional[Dict[str, str]]:
+        """Retrieve the statistics of today"""
+        statistics = None
+        if self._ensure_connected():
+            Domoticz.Log('Retrieving vehicle statistics')
+            try:
+                vin: str = self._car.get('vin', '') if self._car else ''
+                statistics = asyncio.run(self._client.get_driving_statistics(vin, interval='day'))
+            except mytoyota.exceptions.ToyotaInternalError:
+                pass
+            except TypeError as inst:
+                Domoticz.Error(f'TypeError exception raised: {inst}')
+                Domoticz.Dump()
+            Domoticz.Log('Vehicle statistics received')
+
+        stats_today = None
+        Domoticz.Log('Looking up statistics of today')
+        if statistics is None:
+            Domoticz.Error('Vehicle statistics could not be retrieved')
+        else:
+            today = datetime.date.today().isoformat()
+            for record in statistics:
+                bucket_data = record.get('bucket', None)
+                date = bucket_data.get('date', '') if bucket_data else ''
+                if date == today:
+                    stats_today = record.get('data', None)
+                    break
+        return stats_today
+
     def disconnect(self) -> None:
         """Disconnect from the Toyota MyT servers."""
         self._client = None
-        if self._loop:
-            self._loop.close()
 
 
 class DomoticzDevice(ABC):  # pylint:disable=too-few-public-methods
@@ -279,11 +308,19 @@ class ToyotaDomoticzDevice(DomoticzDevice):
         """Check if the device is present in Domoticz, and otherwise create it."""
         return
 
-    @abstractmethod
-    def update(self, vehicle_status) -> None:
-        """Determine the actual value of the instrument and update the device in Domoticz."""
+    def update(self, vehicle_status) -> None:    # pylint:disable=no-self-use,unused-argument
+        """
+        Determine the actual value of the instrument and
+        update the device in Domoticz.
+        """
         return
 
+    def update_statistics(self, statistics) -> None:    # pylint:disable=no-self-use,unused-argument
+        """
+        Determine the actual value of the statistic of
+        today and update the device in Domoticz.
+        """
+        return
 
 class MileageToyotaDevice(ToyotaDomoticzDevice):
     """The Domoticz device that shows the mileage."""
@@ -490,12 +527,53 @@ class LockedToyotaDevice(ToyotaDomoticzDevice):
                 self._last_state = state
                 self.did_update()
 
+
+class ConsumedFuelToyotaDevice(ToyotaDomoticzDevice):
+    """The Domoticz device that shows the average consumed fuelage in l/100 km."""
+
+    def __init__(self) -> None:
+        super().__init__(UNIT_CONSUMED_FUEL_INDEX)
+        self._last_consumed_fuel: float = 0.0
+
+    def create(self, vehicle_status) -> None:
+        """Check if the device is present in Domoticz, and otherwise create it."""
+        if vehicle_status:
+            if not self.exists():
+                Domoticz.Device(Name='Consumed fuel', Unit=self._unit_index,
+                                TypeName='Counter Incremental', Switchtype=3,
+                                Used=1,
+                                Description='Average consumed fuel in l/100 km',
+                                Options={'ValueUnits': 'l/100 km',
+                                         'ValueQuantity': 'l/100 km'}
+                                ).Create()
+        if self.exists():
+            try:
+                self._last_consumed_fuel = float(Devices[self._unit_index].sValue)
+            except ValueError:
+                self._last_consumed_fuel = 0
+
+    def update_statistics(self, statistics) -> None:
+        """Determine the actual value of the statistics and update the device in Domoticz."""
+        if self.exists():
+            Domoticz.Log(f'{statistics}')
+            fuel = float(statistics.get('totalFuelConsumedInL', 0.0)) if statistics else 0.0
+            Domoticz.Log(f'Fuel consumed: {fuel}')
+            if fuel != self._last_consumed_fuel or self.requires_update():
+                # Restore the counter to 0
+                Devices[self._unit_index].Update(nValue=0, sValue=f'-{self._last_consumed_fuel}')
+                # Set the actual value for today
+                Devices[self._unit_index].Update(nValue=0, sValue=f'{fuel}')
+                self._last_consumed_fuel = fuel
+                self.did_update()
+
+
 class ToyotaPlugin(ReducedHeartBeat, ToyotaMyTConnector):
     """Domoticz plugin function implementation to get information from Toyota MyT."""
 
     def __init__(self) -> None:
         super().__init__()
         self._devices: List[ToyotaDomoticzDevice] = []
+        self._now = arrow.now()
 
     def add_devices(self) -> None:
         """Add all the device classes that are part of this plugin."""
@@ -504,6 +582,7 @@ class ToyotaPlugin(ReducedHeartBeat, ToyotaMyTConnector):
         self._devices += [DistanceToyotaDevice()]
         self._devices += [LockedToyotaDevice()]
         self._devices += [ParkingLocationToyotaDevice()]
+        self._devices += [ConsumedFuelToyotaDevice()]
 
     def update_devices(self) -> None:
         """Retrieve the status of the vehicle and update the Domoticz devices."""
@@ -511,6 +590,10 @@ class ToyotaPlugin(ReducedHeartBeat, ToyotaMyTConnector):
         if vehicle_status:
             for device in self._devices:
                 device.update(vehicle_status)
+        statistics = self.retrieve_statistics()
+        if statistics:
+            for device in self._devices:
+                device.update_statistics(statistics)
 
     def create_devices(self) -> None:
         """Create the appropiate devices in Domoticz for the vehicle."""
