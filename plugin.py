@@ -69,10 +69,7 @@ from abc import ABC, abstractmethod
 import asyncio
 import datetime
 from typing import Any, Union, List, Tuple, Optional, Dict
-
-import arrow
-#from datetime import datetime as dt_datetime
-import importlib
+import arrow         # pylint:disable=import-error
 
 MINIMUM_PYTHON_VERSION = (3, 7)
 DO_DOMOTICZ_DEBUGGING: bool = False
@@ -172,7 +169,8 @@ class ToyotaMyTConnector():
         self._client: MyT = None
         self._car: Optional[Dict[str, Any]] = None
 
-    def _lookup_car(self, cars: Optional[List[Dict[str, Any]]], identifier: str) -> Optional[Dict[str, Any]]:    # pylint:disable=no-self-use
+    def _lookup_car(self, cars: Optional[List[Dict[str, Any]]],   # pylint:disable=no-self-use
+                identifier: str) -> Optional[Dict[str, Any]]:
         """Find and eturn the first car from cars that confirms to the passed identifier."""
         if not cars is None and identifier:
             car_id = identifier.upper().strip()
@@ -310,12 +308,18 @@ class ToyotaDomoticzDevice(DomoticzDevice):
         """Check if the device is present in Domoticz, and otherwise create it."""
         return
 
-    def update(self, vehicle_status) -> None:
-        """Determine the actual value of the instrument and update the device in Domoticz."""
+    def update(self, vehicle_status) -> None:    # pylint:disable=no-self-use,unused-argument
+        """
+        Determine the actual value of the instrument and
+        update the device in Domoticz.
+        """
         return
 
-    def update_statistics(self, statistics) -> None:
-        """Determine the actual value of the statistic of today and update the device in Domoticz."""
+    def update_statistics(self, statistics) -> None:    # pylint:disable=no-self-use,unused-argument
+        """
+        Determine the actual value of the statistic of
+        today and update the device in Domoticz.
+        """
         return
 
 class MileageToyotaDevice(ToyotaDomoticzDevice):
