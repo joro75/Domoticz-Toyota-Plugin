@@ -1,3 +1,8 @@
+
+*** These modified files were found in JOE when it aborted on Tue Mar 29 21:47:05 2022
+*** JOE was aborted because the terminal closed
+
+*** File 'plugin.py'
 # Copyright (C) 2021 John de Rooij
 #
 # This software is licensed as described in the file LICENSE, which
@@ -44,10 +49,6 @@
             <li>Locked - Shows if the car is locked or unlocked</li>
             <li>Parking location - Shows the address of the parking location of the car</li>
             <li>Consumed fuel - Shows the average consumed fuel in l/100 km</li>
-            <li>Accelerations - Shows the number of hard accelerations</li>
-            <li>Brakes - Shows the number of hard brakes</li>
-            <li>Duration - Shows the total driving duration in seconds</li>
-            <li>Idle - Shows the total standstill duration in seconds</li>
         </ul>
         <h3>Configuration</h3>
         <ul style="list-style-type:square">
@@ -73,7 +74,10 @@ from abc import ABC, abstractmethod
 import asyncio
 import datetime
 from typing import Any, Union, List, Tuple, Optional, Dict
-import arrow         # pylint:disable=import-error
+
+import arrow
+#from datetime import datetime as dt_datetime
+import importlib
 
 MINIMUM_PYTHON_VERSION = (3, 7)
 DO_DOMOTICZ_DEBUGGING: bool = False
@@ -142,10 +146,6 @@ UNIT_DISTANCE_INDEX: int = 3
 UNIT_CAR_LOCKED_INDEX: int = 4
 UNIT_PARKING_LOCATION_INDEX: int = 5
 UNIT_CONSUMED_FUEL_INDEX: int = 6
-UNIT_ACCELERATIONS_INDEX: int = 7
-UNIT_BRAKES_INDEX: int = 8
-UNIT_DURATION_INDEX: int = 9
-UNIT_IDLE_INDEX: int = 10
 
 class ReducedHeartBeat(ABC):
     """Helper class that only calls the update of the devices every ... heartbeat."""
@@ -177,8 +177,7 @@ class ToyotaMyTConnector():
         self._client: MyT = None
         self._car: Optional[Dict[str, Any]] = None
 
-    def _lookup_car(self, cars: Optional[List[Dict[str, Any]]],   # pylint:disable=no-self-use
-                identifier: str) -> Optional[Dict[str, Any]]:
+    def _lookup_car(self, cars: Optional[List[Dict[str, Any]]], identifier: str) -> Optional[Dict[str, Any]]:    # pylint:disable=no-self-use
         """Find and eturn the first car from cars that confirms to the passed identifier."""
         if not cars is None and identifier:
             car_id = identifier.upper().strip()
@@ -316,18 +315,12 @@ class ToyotaDomoticzDevice(DomoticzDevice):
         """Check if the device is present in Domoticz, and otherwise create it."""
         return
 
-    def update(self, vehicle_status) -> None:    # pylint:disable=no-self-use,unused-argument
-        """
-        Determine the actual value of the instrument and
-        update the device in Domoticz.
-        """
+    def update(self, vehicle_status) -> None:
+        """Determine the actual value of the instrument and update the device in Domoticz."""
         return
 
-    def update_statistics(self, statistics) -> None:    # pylint:disable=no-self-use,unused-argument
-        """
-        Determine the actual value of the statistic of
-        today and update the device in Domoticz.
-        """
+    def update_statistics(self, statistics) -> None:
+        """Determine the actual value of the statistic of today and update the device in Domoticz."""
         return
 
 class MileageToyotaDevice(ToyotaDomoticzDevice):
@@ -345,9 +338,8 @@ class MileageToyotaDevice(ToyotaDomoticzDevice):
                                 TypeName='Counter Incremental', Switchtype=3,
                                 Used=1,
                                 Description='Counter to hold the overall mileage',
-                                Options={'ValueQuantity': 'Distance',
-                                         'ValueUnits': 'km',
-                                        }
+                                Options={'ValueUnits': 'km',
+                                         'ValueQuantity': 'km'}
                                 ).Create()
 
         # Retrieve the last mileage that is already known in Domoticz
@@ -482,7 +474,6 @@ class ParkingLocationToyotaDevice(ToyotaDomoticzDevice):
         location = geolocator.reverse(coord_str)
         return (location.address if location else '')
 
-
 class LockedToyotaDevice(ToyotaDomoticzDevice):
     """The Domoticz device that shows the locked/unlocked status of the car."""
 
@@ -553,15 +544,14 @@ class ConsumedFuelToyotaDevice(ToyotaDomoticzDevice):
                                 TypeName='Counter Incremental', Switchtype=3,
                                 Used=1,
                                 Description='Average consumed fuel in l/100 km',
-                                Options={'ValueQuantity': 'Consumption',
-                                         'ValueUnits': 'l/100 km',
-                                        }
+                                Options={'ValueUnits': 'l/100 km',
+                                         'ValueQuantity': 'l/100 km'}
                                 ).Create()
         if self.exists():
             try:
                 self._last_consumed_fuel = float(Devices[self._unit_index].sValue)
             except ValueError:
-                self._last_consumed_fuel = 0
+                self._last_cfuel = 0
 
     def update_statistics(self, statistics) -> None:
         """Determine the actual value of the statistics and update the device in Domoticz."""
@@ -570,159 +560,11 @@ class ConsumedFuelToyotaDevice(ToyotaDomoticzDevice):
             fuel = float(statistics.get('totalFuelConsumedInL', 0.0)) if statistics else 0.0
             Domoticz.Log(f'Fuel consumed: {fuel}')
             if fuel != self._last_consumed_fuel or self.requires_update():
-                # Restore the counter to 0
-                Devices[self._unit_index].Update(nValue=0, sValue=f'-{self._last_consumed_fuel}')
+                # Clear the counter for today
+                Devices[self._unit_index].Update(nValue=0, sValue='-1')
                 # Set the actual value for today
                 Devices[self._unit_index].Update(nValue=0, sValue=f'{fuel}')
                 self._last_consumed_fuel = fuel
-                self.did_update()
-
-
-class AccelerationsToyotaDevice(ToyotaDomoticzDevice):
-    """The Domoticz device that shows the number of hard accelerations."""
-
-    def __init__(self) -> None:
-        super().__init__(UNIT_ACCELERATIONS_INDEX)
-        self._last_accelerations: int = 0
-
-    def create(self, vehicle_status) -> None:
-        """Check if the device is present in Domoticz, and otherwise create it."""
-        if vehicle_status:
-            if not self.exists():
-                Domoticz.Device(Name='Accelerations', Unit=self._unit_index,
-                                TypeName='Counter Incremental', Switchtype=3,
-                                Used=1,
-                                Description='Number of hard accelerations',
-                                Options={'ValueQuantity': 'Count',
-                                         'ValueUnits': '',
-                                        }
-                                ).Create()
-        if self.exists():
-            try:
-                self._last_accelerations = int(Devices[self._unit_index].sValue)
-            except ValueError:
-                self._last_accelerations = 0
-
-    def update_statistics(self, statistics) -> None:
-        """Determine the actual value of the statistics and update the device in Domoticz."""
-        if self.exists():
-            accelerations = int(statistics.get('hardAccelerationCount', 0)) if statistics else 0
-            diff = accelerations - self._last_accelerations
-            if diff != 0 or self.requires_update():
-                value = f'{diff if diff > 0 else accelerations}'
-                Devices[self._unit_index].Update(nValue=0, sValue=value)
-                self._last_accelerations = accelerations
-                self.did_update()
-
-
-class BrakesToyotaDevice(ToyotaDomoticzDevice):
-    """The Domoticz device that shows the number of hard brakes."""
-
-    def __init__(self) -> None:
-        super().__init__(UNIT_BRAKES_INDEX)
-        self._last_brakes: int = 0
-
-    def create(self, vehicle_status) -> None:
-        """Check if the device is present in Domoticz, and otherwise create it."""
-        if vehicle_status:
-            if not self.exists():
-                Domoticz.Device(Name='Brakes', Unit=self._unit_index,
-                                TypeName='Counter Incremental', Switchtype=3,
-                                Used=1,
-                                Description='Number of hard brakes',
-                                Options={'ValueQuantity': 'Count',
-                                         'ValueUnits': '',
-                                        }
-                                ).Create()
-        if self.exists():
-            try:
-                self._last_brakes = int(Devices[self._unit_index].sValue)
-            except ValueError:
-                self._last_brakes = 0
-
-    def update_statistics(self, statistics) -> None:
-        """Determine the actual value of the statistics and update the device in Domoticz."""
-        if self.exists():
-            brakes = int(statistics.get('hardBrakingCount', 0)) if statistics else 0
-            diff = brakes - self._last_brakes
-            if diff != 0 or self.requires_update():
-                value = f'{diff if diff > 0 else brakes}'
-                Devices[self._unit_index].Update(nValue=0, sValue=value)
-                self._last_brakes = brakes
-                self.did_update()
-
-
-class DurationToyotaDevice(ToyotaDomoticzDevice):
-    """The Domoticz device that shows the total driving duration in seconds."""
-
-    def __init__(self) -> None:
-        super().__init__(UNIT_DURATION_INDEX)
-        self._last_duration: int = 0
-
-    def create(self, vehicle_status) -> None:
-        """Check if the device is present in Domoticz, and otherwise create it."""
-        if vehicle_status:
-            if not self.exists():
-                Domoticz.Device(Name='Duration', Unit=self._unit_index,
-                                TypeName='Counter Incremental', Switchtype=3,
-                                Used=1,
-                                Description='Total driving duration in seconds',
-                                Options={'ValueQuantity': 'Duration',
-                                         'ValueUnits': 'sec',
-                                        }
-                                ).Create()
-        if self.exists():
-            try:
-                self._last_duration = int(Devices[self._unit_index].sValue)
-            except ValueError:
-                self._last_duration = 0
-
-    def update_statistics(self, statistics) -> None:
-        """Determine the actual value of the statistics and update the device in Domoticz."""
-        if self.exists():
-            duration = int(statistics.get('totalDurationInSec', 0)) if statistics else 0
-            diff = duration - self._last_duration
-            if diff != 0 or self.requires_update():
-                value = f'{diff if diff > 0 else duration}'
-                Devices[self._unit_index].Update(nValue=0, sValue=value)
-                self._last_duration = duration
-                self.did_update()
-
-
-class IdleToyotaDevice(ToyotaDomoticzDevice):
-    """The Domoticz device that shows the total standstill duration in seconds."""
-
-    def __init__(self) -> None:
-        super().__init__(UNIT_IDLE_INDEX)
-        self._last_idle: int = 0
-
-    def create(self, vehicle_status) -> None:
-        """Check if the device is present in Domoticz, and otherwise create it."""
-        if vehicle_status:
-            if not self.exists():
-                Domoticz.Device(Name='Idle', Unit=self._unit_index,
-                                TypeName='Counter Incremental', Switchtype=3,
-                                Used=1,
-                                Description='Total standstill duration in seconds',
-                                Options={'ValueQuantity': 'Duration',
-                                         'ValueUnits': 'sec',
-                                        }
-                                ).Create()
-        if self.exists():
-            try:
-                self._last_idle = int(Devices[self._unit_index].sValue)
-            except ValueError:
-                self._last_idle = 0
-
-    def update_statistics(self, statistics) -> None:
-        """Determine the actual value of the statistics and update the device in Domoticz."""
-        if self.exists():
-            idle = int(statistics.get('idleDurationInSec', 0)) if statistics else 0
-            diff = idle - self._last_idle
-            if diff != 0 or self.requires_update():
-                value = f'{diff if diff > 0 else idle}'
-                Devices[self._unit_index].Update(nValue=0, sValue=value)
-                self._last_idle = idle
                 self.did_update()
 
 
@@ -742,10 +584,6 @@ class ToyotaPlugin(ReducedHeartBeat, ToyotaMyTConnector):
         self._devices += [LockedToyotaDevice()]
         self._devices += [ParkingLocationToyotaDevice()]
         self._devices += [ConsumedFuelToyotaDevice()]
-        self._devices += [AccelerationsToyotaDevice()]
-        self._devices += [BrakesToyotaDevice()]
-        self._devices += [DurationToyotaDevice()]
-        self._devices += [IdleToyotaDevice()]
 
     def update_devices(self) -> None:
         """Retrieve the status of the vehicle and update the Domoticz devices."""
