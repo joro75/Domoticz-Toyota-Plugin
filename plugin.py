@@ -8,10 +8,10 @@
 # CodingGuidelines 2020-04-11
 # pylint:disable=line-too-long
 """
-<plugin key="Toyota" name="Toyota" author="joro75" version="0.9.1"
+<plugin key="Toyota" name="Toyota" author="joro75" version="0.9.2"
         externallink="https://github.com/joro75/Domoticz-Toyota-Plugin">
     <description>
-        <h2>Domoticz Toyota Plugin 0.9.1</h2>
+        <h2>Domoticz Toyota Plugin 0.9.2</h2>
         <p>
         A Domoticz plugin that provides devices for a Toyota car with connected services.
         </p>
@@ -19,16 +19,16 @@
         It is using the same API that is used by the Toyota MyT connected services.
         This API is however only useable for cars that are purchased in Europe.
         For more information on Toyota MyT see the
-        <a href="https://www.toyota.at/service-und-zubehoer/myt.json">Austrian</a>,
-        <a href="https://nl.toyota.be/customer-portal/myt">Belgian</a>,
+        <a href="https://www.toyota.at/owners/myt-and-multimedia">Austrian</a>,
+        <a href="https://nl.toyota.be/naverkoop/connected-services/myt">Belgian</a>,
         <a href="https://www.toyota.co.uk/owners/servicing-and-aftercare/my-toyota/myt-and-connected-services">British</a>,
-        <a href="https://www.toyota.dk/service-and-accessories/my-toyota/myt#">Danish</a>,
-        <a href="https://www.toyota.nl/service-and-accessories/my-toyota/myt.json">Dutch</a>,
+        <a href="https://www.toyota.dk/toyota-ejere/din-toyota/myt-connected-services">Danish</a>,
+        <a href="https://www.toyota.nl/toyota-rijders/connected-services1/myt">Dutch</a>,
         <a href="https://www.toyota-europe.com/service-and-accessories/my-toyota/myt">European</a>,
-        <a href="https://www.toyota.fr/service-and-accessories/my-toyota/myt">French</a>,
+        <a href="https://www.toyota.fr/ma-toyota/application-myt">French</a>,
         <a href="https://www.toyota.de/service_und_zubehoer/myt">German</a>,
-        <a href="https://www.toyota.it/gamma/myt-servizi-connessi">Italian</a>,
-        <a href="https://www.toyota.es/MyT/">Spanish</a> or
+        <a href="https://www.toyota.it/clienti/multimedia/myt-servizi-connessi">Italian</a>,
+        <a href="https://www.toyota.es/servicios-conectados-myt">Spanish</a> or
         <a href="https://fr.toyota.ch/owners/myt-app-multimedia">Swiss</a> website.
         </p>
         <p>
@@ -77,8 +77,8 @@ import arrow         # pylint:disable=import-error
 
 MINIMUM_PYTHON_VERSION = (3, 7)
 DO_DOMOTICZ_DEBUGGING: bool = False
-MINIMUM_MYTOYOTA_VERSION: str = '0.8.1'
-MINIMUM_GEOPY_VERSION: str = '2.2.0'
+MINIMUM_MYTOYOTA_VERSION: str = '0.9.1'
+MINIMUM_GEOPY_VERSION: str = '2.3.0'
 
 NOMINATIM_USER_AGENT = 'Domoticz-Toyota-Plugin'
 
