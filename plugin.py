@@ -19,16 +19,16 @@
         It is using the same API that is used by the Toyota MyT connected services.
         This API is however only useable for cars that are purchased in Europe.
         For more information on Toyota MyT see the
-        <a href="https://www.toyota.at/service-und-zubehoer/myt.json">Austrian</a>,
-        <a href="https://nl.toyota.be/customer-portal/myt">Belgian</a>,
+        <a href="https://www.toyota.at/owners/myt-and-multimedia">Austrian</a>,
+        <a href="https://nl.toyota.be/naverkoop/connected-services/myt">Belgian</a>,
         <a href="https://www.toyota.co.uk/owners/servicing-and-aftercare/my-toyota/myt-and-connected-services">British</a>,
-        <a href="https://www.toyota.dk/service-and-accessories/my-toyota/myt#">Danish</a>,
-        <a href="https://www.toyota.nl/service-and-accessories/my-toyota/myt.json">Dutch</a>,
+        <a href="https://www.toyota.dk/toyota-ejere/din-toyota/myt-connected-services">Danish</a>,
+        <a href="https://www.toyota.nl/toyota-rijders/connected-services1/myt">Dutch</a>,
         <a href="https://www.toyota-europe.com/service-and-accessories/my-toyota/myt">European</a>,
-        <a href="https://www.toyota.fr/service-and-accessories/my-toyota/myt">French</a>,
+        <a href="https://www.toyota.fr/ma-toyota/application-myt">French</a>,
         <a href="https://www.toyota.de/service_und_zubehoer/myt">German</a>,
-        <a href="https://www.toyota.it/gamma/myt-servizi-connessi">Italian</a>,
-        <a href="https://www.toyota.es/MyT/">Spanish</a> or
+        <a href="https://www.toyota.it/clienti/multimedia/myt-servizi-connessi">Italian</a>,
+        <a href="https://www.toyota.es/servicios-conectados-myt">Spanish</a> or
         <a href="https://fr.toyota.ch/owners/myt-app-multimedia">Swiss</a> website.
         </p>
         <p>
