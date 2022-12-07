@@ -8,10 +8,10 @@
 # CodingGuidelines 2020-04-11
 # pylint:disable=line-too-long
 """
-<plugin key="Toyota" name="Toyota" author="joro75" version="0.9.1"
+<plugin key="Toyota" name="Toyota" author="joro75" version="0.9.2"
         externallink="https://github.com/joro75/Domoticz-Toyota-Plugin">
     <description>
-        <h2>Domoticz Toyota Plugin 0.9.1</h2>
+        <h2>Domoticz Toyota Plugin 0.9.2</h2>
         <p>
         A Domoticz plugin that provides devices for a Toyota car with connected services.
         </p>
@@ -77,8 +77,8 @@ import arrow         # pylint:disable=import-error
 
 MINIMUM_PYTHON_VERSION = (3, 7)
 DO_DOMOTICZ_DEBUGGING: bool = False
-MINIMUM_MYTOYOTA_VERSION: str = '0.8.1'
-MINIMUM_GEOPY_VERSION: str = '2.2.0'
+MINIMUM_MYTOYOTA_VERSION: str = '0.9.1'
+MINIMUM_GEOPY_VERSION: str = '2.3.0'
 
 NOMINATIM_USER_AGENT = 'Domoticz-Toyota-Plugin'
 
