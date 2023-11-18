@@ -78,16 +78,16 @@ create a new branch, which includes the improvements. Before making a PR, please
 and make sure that all tests are passing before requesting the PR.
 
 [MyT_Austrian]: https://www.toyota.at/owners/myt-and-multimedia
-[MyT_Belgian]: https://nl.toyota.be/naverkoop/connected-services/myt
+[MyT_Belgian]: https://nl.toyota.be/naverkoop/toyota-connected-services
 [MyT_British]: https://www.toyota.co.uk/owners/servicing-and-aftercare/my-toyota/myt-and-connected-services
 [MyT_Danish]: https://www.toyota.dk/toyota-ejere/din-toyota/myt-connected-services
 [MyT_Dutch]: https://www.toyota.nl/toyota-rijders/connected-services1/myt
-[MyT_European]: https://www.toyota-europe.com/service-and-accessories/my-toyota/myt
+[MyT_European]: https://www.toyota-europe.com/myt
 [MyT_French]: https://www.toyota.fr/ma-toyota/application-myt
 [MyT_German]: https://www.toyota.de/service_und_zubehoer/myt
 [MyT_Italian]: https://www.toyota.it/clienti/multimedia/myt-servizi-connessi
 [MyT_Spanish]: https://www.toyota.es/servicios-conectados-myt
-[Myt_Swiss]: https://fr.toyota.ch/owners/myt-app-multimedia
+[Myt_Swiss]: https://fr.toyota.ch/owners/services-connectes
 [mytoyota]: https://github.com/DurgNomis-drol/mytoyota
 [toyota]: https://global.toyota/en/
 [domoticz]: https://www.domoticz.com/
