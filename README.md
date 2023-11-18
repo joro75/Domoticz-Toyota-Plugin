@@ -1,9 +1,9 @@
-# Domoticz-Toyota-Plugin 0.9.2
-[![PyPI pyversions](https://img.shields.io/badge/python-3.7-blue.svg)]() [![Plugin version](https://img.shields.io/badge/version-0.9.2-red.svg)](https://github.com/joro75/Domoticz-Toyota-Plugin/branches)
+# Domoticz-Toyota-Plugin 0.9.3
+[![PyPI pyversions](https://img.shields.io/badge/python-3.8-blue.svg)]() [![Plugin version](https://img.shields.io/badge/version-0.9.3-red.svg)](https://github.com/joro75/Domoticz-Toyota-Plugin/branches)
 
 A [Domoticz][domoticz] plugin that provides devices for a [Toyota][toyota] car with connected services.
 
-Be aware that since version 0.9.2 also an update of [mytoyota][mytoyota] to version 0.9.1 is required, so ensure that
+Be aware that since version 0.9.3 also an update of [mytoyota][mytoyota] to version 0.9.3 is required, so ensure that
 also the [mytoyota][mytoyota] Python module is updated!
 
 This plugin is using the same API that is used by the Toyota MyT connected services
@@ -33,8 +33,8 @@ devices in Domoticz.
 | Idle             |                                                                                                                                                       | Shows the total standstill duration in seconds       |
 
 ## Installation and Setup
-- a running Domoticz installation, tested with version 2021.1 and Python 3.7
-- Python >= 3.7
+- a running Domoticz installation, tested with version 2021.1 and Python 3.8 and higher
+- Python >= 3.8
 - clone project
     - go to `domoticz/plugins` directory
     - clone the project
@@ -44,7 +44,7 @@ devices in Domoticz.
         ```
 - or just download, unzip and copy to `domoticz/plugins`
 - install needed python modules:
-   - [mytoyota][mytoyota] Version 0.9.1
+   - [mytoyota][mytoyota] Version 0.9.3
    - [geopy](https://github.com/geopy/geopy) Version 2.3.0
    - setuptools Version >= 57.0.0
    - for an automated install of these, you can use `sudo pip3 install -r requirements.txt`
