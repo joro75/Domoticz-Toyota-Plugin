@@ -505,7 +505,7 @@ class LockedToyotaDevice(ToyotaDomoticzDevice):
     def _get_doors(self, vehicle_status):    # pylint:disable=no-self-use
         """Return an array of individual door instances"""
         doors = []
-        if vehicle_status and vehicle_status.sensors.doors:
+        if vehicle_status and vehicle_status.sensors and vehicle_status.sensors.doors:
             direct = vehicle_status.sensors.doors
             try:
                 doors = [direct.driver_seat, direct.passenger_seat,
