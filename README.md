@@ -1,6 +1,10 @@
 # Domoticz-Toyota-Plugin 0.9.3
 [![PyPI pyversions](https://img.shields.io/badge/python-3.8-blue.svg)]() [![Plugin version](https://img.shields.io/badge/version-0.9.3-red.svg)](https://github.com/joro75/Domoticz-Toyota-Plugin/branches)
 
+> ⚠️ **Archived:**  
+> This project is no longer maintained, receives no updates, and is not supported anymore. It is no longer in use. Please do not rely on it for production purposes and instead refer to any active successors or reach out if you need help migrating data.
+
+
 A [Domoticz][domoticz] plugin that provides devices for a [Toyota][toyota] car with connected services.
 
 Be aware that since version 0.9.3 also an update of [mytoyota][mytoyota] to version 0.9.3 is required, so ensure that
